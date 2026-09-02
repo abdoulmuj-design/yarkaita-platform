@@ -1,0 +1,614 @@
+// YARKAITA PLATFORM - Prisma Schema
+// Full Schema: Foundation + Catalog + Inventory + Commerce + Production + Bespoke/Bridal + System
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ========== USER & AUTH ==========
+
+model User {
+  id           String     @id @default(uuid())
+  email        String?    @unique
+  phone        String?    @unique
+  passwordHash String
+  name         String
+  status       String     @default("ACTIVE")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  staffProfile StaffProfile?
+  roles        UserRole[]
+  locations    UserLocation[]
+  requestedTransfers StockTransfer[] @relation("RequestedBy")
+  approvedTransfers  StockTransfer[] @relation("ApprovedBy")
+  assignedProductionTasks ProductionTask[] @relation("AssignedUser")
+  qualityChecks         QualityCheck[]   @relation("CheckedBy")
+  notifications Notification[]
+  auditLogs     AuditLog[]
+
+  @@index([name])
+}
+
+model StaffProfile {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  employeeCode String   @unique
+  department   String
+  position     String
+  hireDate     DateTime?
+  notes        String?
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([department])
+}
+
+model Role {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  description String?
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  users       UserRole[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  roles       RolePermission[]
+}
+
+// Join tables
+
+model UserRole {
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+}
+
+// ========== LOCATIONS ==========
+
+model Location {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  code      String   @unique
+  address   String?
+  city      String?
+  state     String?
+  country   String   @default("Nigeria")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     UserLocation[]
+  inventoryBalances InventoryBalance[]
+  stockTransfersFrom StockTransfer[] @relation("FromLocation")
+  stockTransfersTo   StockTransfer[] @relation("ToLocation")
+  inventoryMovements InventoryMovement[]
+}
+
+model UserLocation {
+  userId     String
+  locationId String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, locationId])
+  @@index([locationId])
+}
+
+// ========== CUSTOMERS ==========
+
+model Customer {
+  id                String   @id @default(uuid())
+  customerCode      String   @unique
+  firstName         String
+  lastName          String
+  email             String?
+  phone             String?
+  gender            String?   // "MALE", "FEMALE", "OTHER"
+  acquisitionSource String   // "INSTAGRAM", "WHATSAPP", "TIKTOK", "WALK_IN", "REFERRAL", "WEBSITE", "OTHER"
+  notes             String?
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  addresses            CustomerAddress[]
+  measurementProfiles  MeasurementProfile[]
+  orders               Order[]
+  bespokeRequests      BespokeRequest[]
+  bridalRequests       BridalRequest[]
+
+  @@index([lastName, firstName])
+  @@index([phone])
+}
+
+model CustomerAddress {
+  id         String   @id @default(uuid())
+  customerId String
+  label      String?  // e.g., "Home", "Office"
+  address    String
+  city       String?
+  state      String?
+  country    String   @default("Nigeria")
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+}
+
+model MeasurementProfile {
+  id          String   @id @default(uuid())
+  customerId  String
+  name        String   @default("Default")
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  versions    MeasurementVersion[]
+
+  @@index([customerId])
+}
+
+model MeasurementVersion {
+  id                    String   @id @default(uuid())
+  measurementProfileId  String
+  version               Int
+  notes                 String?
+  createdAt             DateTime @default(now())
+
+  measurementProfile    MeasurementProfile @relation(fields: [measurementProfileId], references: [id], onDelete: Cascade)
+  measurements          Measurement[]
+
+  @@unique([measurementProfileId, version])
+  @@index([measurementProfileId])
+}
+
+model Measurement {
+  id                    String   @id @default(uuid())
+  measurementVersionId  String
+  name                  String   // e.g., "Bust", "Waist", "Hips"
+  value                 Float
+  unit                  String   @default("cm")
+
+  measurementVersion    MeasurementVersion @relation(fields: [measurementVersionId], references: [id], onDelete: Cascade)
+
+  @@index([measurementVersionId])
+}
+
+// ========== CATALOG ==========
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  slug      String   @unique
+  description String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products  Product[]
+}
+
+model Collection {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  slug      String   @unique
+  description String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products  ProductCollection[]
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  variants    ProductVariant[]
+  media       ProductMedia[]
+  collections ProductCollection[]
+  productionJobs ProductionJob[]
+
+  @@index([categoryId])
+  @@index([name])
+}
+
+model ProductVariant {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku       String   @unique
+  color     String?
+  size      String?
+  price     Float
+  stock     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inventoryBalances InventoryBalance[]
+  inventoryMovements InventoryMovement[]
+  transferItems      StockTransferItem[]
+
+  @@unique([productId, sku])
+  @@index([productId])
+}
+
+model ProductMedia {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  type      String   @default("image") // "image", "video"
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+}
+
+model ProductCollection {
+  productId    String
+  collectionId String
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@id([productId, collectionId])
+  @@index([collectionId])
+}
+
+// ========== INVENTORY ==========
+
+model InventoryBalance {
+  id        String   @id @default(uuid())
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  locationId String
+  location  Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  quantity  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([variantId, locationId])
+  @@index([locationId])
+}
+
+model InventoryMovement {
+  id          String   @id @default(uuid())
+  variantId   String
+  variant     ProductVariant @relation(fields: [variantId], references: [id])
+  locationId  String
+  location    Location @relation(fields: [locationId], references: [id])
+  type        String   // OPENING_STOCK, PURCHASE, SALE, RESERVATION, RELEASE, TRANSFER_IN, TRANSFER_OUT, ADJUSTMENT, RETURN, PRODUCTION
+  quantity    Int
+  referenceId String?
+  notes       String?
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([variantId])
+  @@index([locationId])
+  @@index([type])
+}
+
+model StockTransfer {
+  id            String   @id @default(uuid())
+  transferNumber String  @unique
+  fromLocationId String
+  fromLocation  Location @relation("FromLocation", fields: [fromLocationId], references: [id])
+  toLocationId  String
+  toLocation    Location @relation("ToLocation", fields: [toLocationId], references: [id])
+  status        String   @default("REQUESTED") // REQUESTED, APPROVED, IN_TRANSIT, RECEIVED, CANCELLED
+  requestedById String?
+  requestedBy   User?    @relation("RequestedBy", fields: [requestedById], references: [id])
+  approvedById  String?
+  approvedBy    User?    @relation("ApprovedBy", fields: [approvedById], references: [id])
+  shippedAt     DateTime?
+  receivedAt    DateTime?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  items         StockTransferItem[]
+
+  @@index([fromLocationId])
+  @@index([toLocationId])
+  @@index([status])
+}
+
+model StockTransferItem {
+  id              String   @id @default(uuid())
+  transferId      String
+  transfer        StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  variantId       String
+  variant         ProductVariant @relation(fields: [variantId], references: [id])
+  quantity        Int
+  receivedQuantity Int     @default(0)
+
+  @@index([transferId])
+  @@index([variantId])
+}
+
+// ========== COMMERCE ==========
+
+model Cart {
+  id         String     @id @default(uuid())
+  userId     String?
+  customerId String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  items      CartItem[]
+}
+
+model CartItem {
+  id        String @id @default(uuid())
+  cartId    String
+  productId String
+  variantId String
+  quantity  Int
+  cart      Cart   @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  @@index([cartId])
+}
+
+model Order {
+  id           String   @id @default(uuid())
+  orderNumber  String   @unique
+  customerId   String
+  customer     Customer @relation(fields: [customerId], references: [id])
+  status       String   @default("PENDING") // PENDING, CONFIRMED, PROCESSING, READY, OUT_FOR_DELIVERY, DELIVERED, CANCELLED
+  salesChannel String   // WEBSITE, ABUJA_POS, WHATSAPP_ASSISTED, INSTAGRAM_ASSISTED, WALK_IN, OTHER
+  totalAmount  Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  items       OrderItem[]
+  address     OrderAddress?
+  payments    Payment[]
+  productionJobs ProductionJob[]
+}
+
+model OrderItem {
+  id          String @id @default(uuid())
+  orderId     String
+  order       Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productName String // Snapshot
+  sku         String // Snapshot
+  size        String?
+  color       String?
+  unitPrice   Float
+  quantity    Int
+  totalPrice  Float
+}
+
+model OrderAddress {
+  id        String @id @default(uuid())
+  orderId   String @unique
+  order     Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  address   String
+  city      String?
+  state     String?
+  country   String @default("Nigeria")
+}
+
+model Payment {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  reference String   @unique
+  amount    Float
+  status    String   @default("SUCCESSFUL") // FAILED, SUCCESSFUL, REFUNDED
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+}
+
+// ========== PRODUCTION ==========
+
+model ProductionJob {
+  id          String   @id @default(uuid())
+  jobNumber   String   @unique
+  orderId     String?
+  order       Order?   @relation(fields: [orderId], references: [id])
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
+  status      String   @default("IN_PROGRESS") // NOT_STARTED, IN_PROGRESS, COMPLETED, CANCELLED
+  priority    String   @default("NORMAL") // LOW, NORMAL, HIGH
+  dueDate     DateTime?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tasks       ProductionTask[]
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([status])
+}
+
+model ProductionTask {
+  id           String   @id @default(uuid())
+  productionJobId String
+  productionJob   ProductionJob @relation(fields: [productionJobId], references: [id], onDelete: Cascade)
+  assignedUserId String?
+  assignedUser   User?    @relation("AssignedUser", fields: [assignedUserId], references: [id])
+  department   String   // CUTTING, TAILORING, STONE, IRONING, QC
+  taskType     String
+  status       String   @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, REWORK
+  priority     String   @default("NORMAL") // LOW, NORMAL, HIGH
+  dueDate      DateTime?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  qualityChecks QualityCheck[]
+
+  @@index([productionJobId])
+  @@index([assignedUserId])
+  @@index([status])
+}
+
+model QualityCheck {
+  id        String   @id @default(uuid())
+  productionTaskId String
+  productionTask   ProductionTask @relation(fields: [productionTaskId], references: [id], onDelete: Cascade)
+  checkedById String?
+  checkedBy   User?    @relation("CheckedBy", fields: [checkedById], references: [id])
+  status     String   @default("PENDING") // PENDING, PASSED, FAILED
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  @@index([productionTaskId])
+  @@index([checkedById])
+}
+
+// ========== BESPOKE / BRIDAL ==========
+
+model BespokeRequest {
+  id          String   @id @default(uuid())
+  requestNumber String @unique
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id])
+  description String
+  status      String   @default("PENDING") // PENDING, QUOTED, APPROVED, ORDERED, IN_PRODUCTION, COMPLETED, CANCELLED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  media       BespokeMedia[]
+  quotes      Quote[]
+}
+
+model BespokeMedia {
+  id        String @id @default(uuid())
+  bespokeRequestId String
+  bespokeRequest   BespokeRequest @relation(fields: [bespokeRequestId], references: [id], onDelete: Cascade)
+  url       String
+  type      String @default("image")
+  createdAt DateTime @default(now())
+
+  @@index([bespokeRequestId])
+}
+
+model BridalRequest {
+  id          String   @id @default(uuid())
+  requestNumber String @unique
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id])
+  description String
+  status      String   @default("PENDING") // PENDING, QUOTED, APPROVED, ORDERED, IN_PRODUCTION, COMPLETED, CANCELLED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  media       BridalMedia[]
+  quotes      Quote[]
+}
+
+model BridalMedia {
+  id        String @id @default(uuid())
+  bridalRequestId String
+  bridalRequest   BridalRequest @relation(fields: [bridalRequestId], references: [id], onDelete: Cascade)
+  url       String
+  type      String @default("image")
+  createdAt DateTime @default(now())
+
+  @@index([bridalRequestId])
+}
+
+model Quote {
+  id          String   @id @default(uuid())
+  quoteNumber String   @unique
+  bespokeRequestId String?
+  bespokeRequest   BespokeRequest? @relation(fields: [bespokeRequestId], references: [id])
+  bridalRequestId  String?
+  bridalRequest    BridalRequest?  @relation(fields: [bridalRequestId], references: [id])
+  status      String   @default("DRAFT") // DRAFT, SENT, APPROVED, REJECTED
+  totalAmount Float
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items       QuoteItem[]
+}
+
+model QuoteItem {
+  id        String @id @default(uuid())
+  quoteId   String
+  quote     Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  name      String
+  quantity  Int    @default(1)
+  unitPrice Float
+  totalPrice Float
+}
+
+// ========== SYSTEM ==========
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  type      String   @default("INFO") // INFO, WARNING, SUCCESS, ERROR
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entityType String
+  entityId  String?
+  oldValue  String?
+  newValue  String?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType])
+}
