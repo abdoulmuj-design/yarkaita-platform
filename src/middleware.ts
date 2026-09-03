@@ -6,13 +6,14 @@ const secret = new TextEncoder().encode(process.env.JWT_SECRET)
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
 
-  // Allow authentication routes (login, register) without token
-  if (path.startsWith('/api/auth')) {
+  // Public routes (no token required)
+  const publicRoutes = ['/api/auth', '/api/products', '/api/categories', '/api/collections']
+  if (publicRoutes.some(route => path.startsWith(route))) {
     return NextResponse.next()
   }
 
+  // Protected routes - require token
   const token = request.headers.get('authorization')?.split(' ')[1]
-
   if (!token) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -26,5 +27,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/api/:path*'], // Protect all API routes except /api/auth
+  matcher: ['/api/:path*'],
 }
