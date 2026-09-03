@@ -25,7 +25,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      {/* Navbar */}
       <nav className="bg-black text-white p-4 shadow-lg">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-3">
@@ -39,7 +38,6 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* Hero Section - Rage girman shi */}
       <div className="bg-black text-white py-12">
         <div className="container mx-auto text-center">
           <h1 className="text-4xl font-bold tracking-wide">YARKAITA</h1>
@@ -47,11 +45,12 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Products Grid - Rage sarari */}
       <div className="container mx-auto py-10 flex-1">
         <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">Our Products</h2>
         {loading ? (
           <p className="text-center text-gray-600">Loading products...</p>
+        ) : products.length === 0 ? (
+          <p className="text-center text-gray-600">No products available yet.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {products.map((product) => (
@@ -78,7 +77,6 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Footer - Yana zaune a ƙasa koyaushe */}
       <footer className="bg-black text-white py-6 mt-10">
         <div className="container mx-auto text-center">
           <p>© 2026 YARKAITA. All rights reserved.</p>
