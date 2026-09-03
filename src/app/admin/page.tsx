@@ -25,7 +25,6 @@ export default function AdminPage() {
       payments: 'Payments',
       production: 'Production Jobs',
       loading: 'Loading...',
-      manage: 'Manage',
     },
     ha: {
       title: 'Admin Dashboard',
@@ -36,7 +35,6 @@ export default function AdminPage() {
       payments: 'Biyan kuɗi',
       production: 'Ayyukan samarwa',
       loading: 'Ana loda...',
-      manage: 'Sarrafa',
     },
   }
 
@@ -81,28 +79,15 @@ export default function AdminPage() {
   }, [])
 
   const statCards = [
-    { label: t.orders, value: stats.orders, color: 'border-blue-500' },
-    { label: t.customers, value: stats.customers, color: 'border-green-500' },
-    { label: t.products, value: stats.products, color: 'border-yellow-500' },
-    { label: t.payments, value: stats.payments, color: 'border-purple-500' },
-    { label: t.production, value: stats.productionJobs, color: 'border-red-500' },
+    { label: t.orders, value: stats.orders, color: 'border-blue-500', href: '/admin/orders' },
+    { label: t.customers, value: stats.customers, color: 'border-green-500', href: '/admin/customers' },
+    { label: t.products, value: stats.products, color: 'border-yellow-500', href: '/admin/products' },
+    { label: t.payments, value: stats.payments, color: 'border-purple-500', href: '/admin/payments' },
+    { label: t.production, value: stats.productionJobs, color: 'border-red-500', href: '/admin/production' },
   ]
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <nav className="bg-black text-white p-4 shadow-lg">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center space-x-3">
-            <img src="/yarkaita-logo.png" alt="YARKAITA Logo" className="h-10 w-auto" />
-          </div>
-          <div className="space-x-6 font-semibold">
-            <Link href="/admin" className="hover:text-gray-300 transition">Dashboard</Link>
-            <Link href="/admin/orders" className="hover:text-gray-300 transition">Orders</Link>
-            <Link href="/admin/customers" className="hover:text-gray-300 transition">Customers</Link>
-            <Link href="/admin/products" className="hover:text-gray-300 transition">Products</Link>
-          </div>
-        </div>
-      </nav>
       <main className="container mx-auto p-6">
         <div className="bg-black text-white p-8 rounded-xl shadow-xl mb-8">
           <h1 className="text-3xl font-bold">{t.title}</h1>
@@ -114,10 +99,12 @@ export default function AdminPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {statCards.map((card, index) => (
-              <div key={index} className={`bg-white p-6 rounded-xl shadow-md border-l-4 ${card.color}`}>
-                <h3 className="text-gray-500 text-sm font-semibold">{card.label}</h3>
-                <p className="text-4xl font-bold text-gray-800 mt-2">{card.value}</p>
-              </div>
+              <Link key={index} href={card.href} className="block">
+                <div className={`bg-white p-6 rounded-xl shadow-md border-l-4 ${card.color} hover:shadow-lg transition`}>
+                  <h3 className="text-gray-500 text-sm font-semibold">{card.label}</h3>
+                  <p className="text-4xl font-bold text-gray-800 mt-2">{card.value}</p>
+                </div>
+              </Link>
             ))}
           </div>
         )}
