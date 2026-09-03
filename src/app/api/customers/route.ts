@@ -16,7 +16,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'firstName, lastName, and acquisitionSource are required' }, { status: 400 })
   }
 
-  // Generate customer code
   const customerCode = `CUS-${Date.now()}`
 
   const customer = await prisma.customer.create({
