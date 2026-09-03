@@ -59,7 +59,7 @@ export default function AdminOrdersPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-6">{t.title}</h2>
+      <h2 className="text-3xl font-extrabold text-gray-900 mb-6">{t.title}</h2>
 
       {loading ? (
         <p className="text-gray-600">{t.loading}</p>
