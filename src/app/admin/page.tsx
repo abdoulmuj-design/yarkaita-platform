@@ -44,6 +44,10 @@ export default function AdminPage() {
     async function fetchStats() {
       try {
         const token = localStorage.getItem('yarkaita_token')
+        if (!token) {
+          setLoading(false)
+          return
+        }
         const headers = { 'Authorization': `Bearer ${token}` }
 
         const [ordersRes, customersRes, productsRes, paymentsRes, jobsRes] = await Promise.all([
@@ -87,7 +91,7 @@ export default function AdminPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-50">
       <main className="container mx-auto p-6">
         <div className="bg-black text-white p-8 rounded-xl shadow-xl mb-8">
           <h1 className="text-3xl font-bold">{t.title}</h1>

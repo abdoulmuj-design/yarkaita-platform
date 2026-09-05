@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -26,17 +25,25 @@ export default function AdminLoginPage() {
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || 'Invalid email or password')
+        setError(data.error || 'Invalid credentials')
+        setLoading(false)
+        return
+      }
+
+      // Check if user is admin
+      if (data.role !== 'ADMIN') {
+        setError('This account is not authorized for admin access.')
         setLoading(false)
         return
       }
 
       localStorage.setItem('yarkaita_token', data.token)
       localStorage.setItem('yarkaita_user', JSON.stringify(data.user))
+      document.cookie = `yarkaita_token=${data.token}; path=/; max-age=86400`
 
       router.push('/admin')
     } catch (err) {
-      setError('Login failed. Please try again.')
+      setError('An error occurred. Please try again.')
       setLoading(false)
     }
   }
@@ -47,8 +54,9 @@ export default function AdminLoginPage() {
         <div className="text-center mb-6">
           <img src="/yarkaita-logo.png" alt="YARKAITA Logo" className="h-16 w-auto mx-auto" />
         </div>
+
         <h1 className="text-2xl font-bold text-center text-gray-800">Admin Login</h1>
-        <p className="text-gray-500 text-center mt-2 mb-6">Sign in to manage YARKAITA</p>
+        <p className="text-gray-500 text-center mt-2 mb-6">Sign in to manage YARKAITA operations.</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -86,10 +94,6 @@ export default function AdminLoginPage() {
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
-
-        <p className="text-center text-sm text-gray-500 mt-4">
-          <Link href="/staff/login" className="hover:underline">Staff Login</Link>
-        </p>
       </div>
     </div>
   )

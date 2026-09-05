@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export default function StaffLoginPage() {
+export default function PosLoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -30,11 +30,13 @@ export default function StaffLoginPage() {
         return
       }
 
+      // Store token and user
       localStorage.setItem('yarkaita_token', data.token)
       localStorage.setItem('yarkaita_user', JSON.stringify(data.user))
       document.cookie = `yarkaita_token=${data.token}; path=/; max-age=86400`
 
-      router.push('/staff')
+      // Redirect to POS dashboard
+      router.push('/pos')
     } catch (err) {
       setError('An error occurred. Please try again.')
       setLoading(false)
@@ -48,8 +50,8 @@ export default function StaffLoginPage() {
           <img src="/yarkaita-logo.png" alt="YARKAITA Logo" className="h-16 w-auto mx-auto" />
         </div>
 
-        <h1 className="text-2xl font-bold text-center text-gray-800">Staff Login</h1>
-        <p className="text-gray-500 text-center mt-2 mb-6">Sign in to view your tasks.</p>
+        <h1 className="text-2xl font-bold text-center text-gray-800">POS Staff Login</h1>
+        <p className="text-gray-500 text-center mt-2 mb-6">Sign in to manage sales.</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

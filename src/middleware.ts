@@ -7,21 +7,26 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
   const method = request.method
 
-  // Allow public access to these routes (no token needed)
+  // Allow public access to login pages and public routes
   const isPublicRoute =
     path.startsWith('/api/auth') ||
+    path === '/admin/login' ||
+    path === '/pos/login' ||
+    path === '/staff/login' ||
     (path.startsWith('/api/products') && method === 'GET') ||
     (path.startsWith('/api/categories') && method === 'GET') ||
     (path.startsWith('/api/collections') && method === 'GET') ||
     (path.startsWith('/api/checkout') && method === 'POST') ||
-    (path.startsWith('/api/customers') && method === 'POST') ||
-    (path.startsWith('/api/staff/tasks') && method === 'GET') // Allow staff tasks without token
+    (path.startsWith('/api/customers') && method === 'POST')
 
   if (isPublicRoute) {
     return NextResponse.next()
   }
 
-  const token = request.headers.get('authorization')?.split(' ')[1]
+  // Get token from Authorization header or cookie
+  const token =
+    request.headers.get('authorization')?.split(' ')[1] ||
+    request.cookies.get('yarkaita_token')?.value
 
   if (!token) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -36,5 +41,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/api/:path*'],
+  matcher: ['/api/:path*', '/admin/:path*', '/pos/:path*', '/staff/:path*'],
 }
