@@ -510,6 +510,8 @@ model BespokeRequest {
   customerId  String
   customer    Customer @relation(fields: [customerId], references: [id])
   description String
+  isNearCompany Boolean @default(false)
+  materialDescription String?
   status      String   @default("PENDING") // PENDING, QUOTED, APPROVED, ORDERED, IN_PRODUCTION, COMPLETED, CANCELLED
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -535,6 +537,8 @@ model BridalRequest {
   customerId  String
   customer    Customer @relation(fields: [customerId], references: [id])
   description String
+  isNearCompany Boolean @default(false)
+  materialDescription String?
   status      String   @default("PENDING") // PENDING, QUOTED, APPROVED, ORDERED, IN_PRODUCTION, COMPLETED, CANCELLED
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

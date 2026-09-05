@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 export default function CartPage() {
+  const router = useRouter()
   const [cart, setCart] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [checkingOut, setCheckingOut] = useState(false)
 
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem('yarkaita_cart') || '[]')
@@ -28,6 +31,49 @@ export default function CartPage() {
   }
 
   const total = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
+
+  async function handleCheckout() {
+    setCheckingOut(true)
+    try {
+      const token = localStorage.getItem('yarkaita_token')
+      const user = JSON.parse(localStorage.getItem('yarkaita_user') || '{}')
+      let customerId = user.id
+
+      // If not logged in, create a walk-in customer
+      if (!customerId) {
+        const customerRes = await fetch('/api/customers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }, // No auth header needed
+          body: JSON.stringify({
+            firstName: 'Walk-In',
+            lastName: 'Customer',
+            acquisitionSource: 'WEBSITE',
+          }),
+        })
+        const customer = await customerRes.json()
+        customerId = customer.id
+      }
+
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token && { 'Authorization': `Bearer ${token}` }) },
+        body: JSON.stringify({ customerId, salesChannel: 'WEBSITE', items: cart }),
+      })
+
+      if (!res.ok) throw new Error('Checkout failed')
+
+      const data = await res.json()
+      localStorage.removeItem('yarkaita_cart')
+      setCart([])
+      alert(`Order ${data.order.orderNumber} completed successfully! Total: ₦${total.toLocaleString()}`)
+      router.push('/')
+    } catch (err) {
+      console.error(err)
+      alert('Checkout failed. Please try again.')
+    } finally {
+      setCheckingOut(false)
+    }
+  }
 
   if (loading) return <p className="text-center text-gray-600">Loading cart...</p>
 
@@ -71,8 +117,12 @@ export default function CartPage() {
             ))}
             <div className="mt-6 text-right">
               <p className="text-2xl font-bold text-gray-900">Total: ₦{total.toLocaleString()}</p>
-              <button className="bg-green-600 text-white py-3 px-8 rounded-lg font-semibold hover:bg-green-700 transition mt-4">
-                Checkout
+              <button
+                onClick={handleCheckout}
+                disabled={checkingOut}
+                className="bg-green-600 text-white py-3 px-8 rounded-lg font-semibold hover:bg-green-700 transition mt-4 disabled:opacity-50"
+              >
+                {checkingOut ? 'Processing...' : 'Checkout'}
               </button>
             </div>
           </div>

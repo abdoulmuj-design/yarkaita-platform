@@ -5,15 +5,23 @@ const secret = new TextEncoder().encode(process.env.JWT_SECRET)
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
+  const method = request.method
 
-  // Public routes (no token required)
-  const publicRoutes = ['/api/auth', '/api/products', '/api/categories', '/api/collections']
-  if (publicRoutes.some(route => path.startsWith(route))) {
+  // Allow public access to these routes (no token needed)
+  const isPublicRoute =
+    path.startsWith('/api/auth') ||
+    (path.startsWith('/api/products') && method === 'GET') ||
+    (path.startsWith('/api/categories') && method === 'GET') ||
+    (path.startsWith('/api/collections') && method === 'GET') ||
+    (path.startsWith('/api/checkout') && method === 'POST') ||
+    (path.startsWith('/api/customers') && method === 'POST')
+
+  if (isPublicRoute) {
     return NextResponse.next()
   }
 
-  // Protected routes - require token
   const token = request.headers.get('authorization')?.split(' ')[1]
+
   if (!token) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }

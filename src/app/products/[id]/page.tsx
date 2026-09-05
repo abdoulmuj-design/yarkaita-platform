@@ -64,7 +64,7 @@ export default function ProductDetailPage() {
           </div>
           <div className="space-x-6 font-semibold">
             <Link href="/" className="hover:text-gray-300 transition">Home</Link>
-            <Link href="/products" className="hover:text-gray-300 transition">Products</Link>
+            <Link href="/custom-request" className="hover:text-gray-300 transition">Custom Request</Link>
             <Link href="/cart" className="hover:text-gray-300 transition">Cart</Link>
           </div>
         </div>
@@ -72,7 +72,8 @@ export default function ProductDetailPage() {
 
       <div className="container mx-auto py-10">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="bg-gray-200 rounded-xl flex items-center justify-center h-96">
+          {/* An gyara nan: aspect-[9/16] */}
+          <div className="bg-gray-200 rounded-xl flex items-center justify-center aspect-[3/4]">
             {product.media?.[0] ? (
               <img src={product.media[0].url} alt={product.name} className="h-full w-full object-cover rounded-xl" />
             ) : (
@@ -95,7 +96,7 @@ export default function ProductDetailPage() {
                     className={`w-full py-2 px-4 rounded-lg border-2 transition ${
                       selectedVariant?.id === variant.id
                         ? 'border-black bg-black text-white'
-                        : 'border-gray-300 hover:border-gray-400'
+                        : 'border-gray-400 bg-white text-gray-800 hover:border-black hover:text-black'
                     }`}
                   >
                     {variant.color} / {variant.size} - ₦{variant.price.toLocaleString()}
@@ -110,14 +111,14 @@ export default function ProductDetailPage() {
                 <div className="flex items-center gap-4 mt-2">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="bg-gray-200 px-3 py-1 rounded-lg"
+                    className="bg-black text-white px-3 py-1 rounded-lg hover:bg-gray-800 transition"
                   >
                     -
                   </button>
-                  <span className="text-xl font-bold">{quantity}</span>
+                  <span className="text-xl font-bold text-gray-900">{quantity}</span>
                   <button
                     onClick={() => setQuantity(quantity + 1)}
-                    className="bg-gray-200 px-3 py-1 rounded-lg"
+                    className="bg-black text-white px-3 py-1 rounded-lg hover:bg-gray-800 transition"
                   >
                     +
                   </button>
