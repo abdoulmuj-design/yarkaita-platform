@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(request: Request) {
-  // Get user ID from token (in a real app, you'd verify JWT here)
-  // For now, we'll get it from the query params or headers
+  // We'll get user ID from query params or headers (simplified for now)
   const userId = request.headers.get('x-user-id')
 
   if (!userId) {

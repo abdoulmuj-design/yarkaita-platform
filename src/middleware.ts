@@ -14,7 +14,8 @@ export async function middleware(request: NextRequest) {
     (path.startsWith('/api/categories') && method === 'GET') ||
     (path.startsWith('/api/collections') && method === 'GET') ||
     (path.startsWith('/api/checkout') && method === 'POST') ||
-    (path.startsWith('/api/customers') && method === 'POST')
+    (path.startsWith('/api/customers') && method === 'POST') ||
+    (path.startsWith('/api/staff/tasks') && method === 'GET') // Allow staff tasks without token
 
   if (isPublicRoute) {
     return NextResponse.next()

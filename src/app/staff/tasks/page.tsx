@@ -59,7 +59,8 @@ export default function TasksPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-6 text-gray-900">{t.title}</h2>
+      {/* An gyara nan: sanya rubutun ya zama dark kuma yana bayyana */}
+      <h2 className="text-3xl font-extrabold text-gray-900 mb-6">{t.title}</h2>
 
       {loading ? (
         <p className="text-gray-600">{t.loading}</p>
@@ -70,17 +71,22 @@ export default function TasksPage() {
       ) : (
         <div className="space-y-4">
           {tasks.map((task) => (
-            <div key={task.id} className="bg-white p-4 rounded-lg shadow-md border-l-4 border-blue-500">
+            <div key={task.id} className="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="font-semibold text-lg text-gray-900">{task.taskType}</h3>
-                  <p className="text-sm text-gray-500">{task.department}</p>
+                  {/* An gyara nan: sanya sunan task ya zama dark */}
+                  <h3 className="font-bold text-xl text-gray-900">{task.taskType}</h3>
+                  <p className="text-sm text-gray-600 mt-1">{task.department}</p>
                 </div>
-                <span className="text-sm font-semibold text-blue-600">{task.status}</span>
+                <span className="text-sm font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                  {task.status}
+                </span>
               </div>
-              <div className="mt-2 text-sm text-gray-700">
-                <p><strong>{t.priority}:</strong> {task.priority}</p>
-                {task.dueDate && <p><strong>{t.dueDate}:</strong> {new Date(task.dueDate).toLocaleDateString()}</p>}
+              <div className="mt-3 text-sm text-gray-700">
+                <p><strong className="text-gray-900">{t.priority}:</strong> {task.priority}</p>
+                {task.dueDate && (
+                  <p className="mt-1"><strong className="text-gray-900">{t.dueDate}:</strong> {new Date(task.dueDate).toLocaleDateString()}</p>
+                )}
               </div>
             </div>
           ))}

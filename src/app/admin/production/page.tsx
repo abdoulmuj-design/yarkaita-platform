@@ -40,12 +40,24 @@ export default function AdminProductionPage() {
     async function fetchJobs() {
       try {
         const token = localStorage.getItem('yarkaita_token')
+        
+        if (!token) {
+          setJobs([])
+          setLoading(false)
+          return
+        }
+
         const res = await fetch('/api/production/jobs', {
           headers: { 'Authorization': `Bearer ${token}` },
         })
         if (!res.ok) throw new Error('Failed to fetch production jobs')
         const data = await res.json()
-        setJobs(data)
+        
+        if (Array.isArray(data)) {
+          setJobs(data)
+        } else {
+          setJobs([])
+        }
       } catch (err) {
         setError(t.error)
       } finally {
