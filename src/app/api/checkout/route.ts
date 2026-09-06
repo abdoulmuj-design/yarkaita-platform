@@ -1,0 +1,69 @@
+import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+
+export async function POST(request: Request) {
+  const body = await request.json()
+  const { customerId, items, salesChannel, address } = body
+
+  if (!customerId || !items || items.length === 0) {
+    return NextResponse.json({ error: 'customerId and items are required' }, { status: 400 })
+  }
+
+  // Generate order number
+  const orderNumber = `ORD-${Date.now()}`
+
+  // Calculate total
+  let totalAmount = 0
+  for (const item of items) {
+    totalAmount += item.unitPrice * item.quantity
+  }
+
+  // Create order
+  const order = await prisma.order.create({
+    data: {
+      orderNumber,
+      customerId,
+      salesChannel: salesChannel || 'WEBSITE',
+      totalAmount,
+      items: {
+        create: items.map((item: any) => ({
+          productName: item.productName,
+          sku: item.sku,
+          size: item.size,
+          color: item.color,
+          unitPrice: item.unitPrice,
+          quantity: item.quantity,
+          totalPrice: item.unitPrice * item.quantity,
+        })),
+      },
+      ...(address && {
+        address: {
+          create: {
+            address: address.address,
+            city: address.city,
+            state: address.state,
+            country: address.country,
+          },
+        },
+      }),
+    },
+  })
+
+  // Create payment (simulated successful payment)
+  const payment = await prisma.payment.create({
+    data: {
+      orderId: order.id,
+      amount: totalAmount,
+      reference: `PAY-${Date.now()}`,
+      status: 'SUCCESSFUL',
+    },
+  })
+
+  // Update order status to CONFIRMED
+  await prisma.order.update({
+    where: { id: order.id },
+    data: { status: 'CONFIRMED' },
+  })
+
+  return NextResponse.json({ order, payment }, { status: 201 })
+}

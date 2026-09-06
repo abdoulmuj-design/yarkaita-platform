@@ -10,10 +10,20 @@ export default function CartPage() {
   const [loading, setLoading] = useState(true)
   const [checkingOut, setCheckingOut] = useState(false)
 
+  function loadCart() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('yarkaita_cart') || '[]')
+      setCart(saved)
+    } catch (error) {
+      console.error('Error loading cart:', error)
+      setCart([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem('yarkaita_cart') || '[]')
-    setCart(saved)
-    setLoading(false)
+    loadCart()
   }, [])
 
   function handleRemove(variantId: string) {
@@ -35,40 +45,56 @@ export default function CartPage() {
   async function handleCheckout() {
     setCheckingOut(true)
     try {
-      const token = localStorage.getItem('yarkaita_token')
-      const user = JSON.parse(localStorage.getItem('yarkaita_user') || '{}')
-      let customerId = user.id
-
-      // If not logged in, create a walk-in customer
-      if (!customerId) {
-        const customerRes = await fetch('/api/customers', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }, // No auth header needed
-          body: JSON.stringify({
-            firstName: 'Walk-In',
-            lastName: 'Customer',
-            acquisitionSource: 'WEBSITE',
-          }),
-        })
-        const customer = await customerRes.json()
-        customerId = customer.id
+      // Don logout ko admin, ko walk-in, muna ƙirƙirar Customer na walk-in
+      const customerRes = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: 'Walk-In',
+          lastName: 'Customer',
+          acquisitionSource: 'WEBSITE',
+        }),
+      })
+      const customer = await customerRes.json()
+      
+      if (!customerRes.ok) {
+        throw new Error(customer.error || 'Failed to create customer')
       }
 
+      const customerId = customer.id
+
+      // Yanzu mu ƙirƙiri Order da Payment
       const res = await fetch('/api/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token && { 'Authorization': `Bearer ${token}` }) },
-        body: JSON.stringify({ customerId, salesChannel: 'WEBSITE', items: cart }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerId,
+          salesChannel: 'WEBSITE',
+          items: cart,
+        }),
       })
 
-      if (!res.ok) throw new Error('Checkout failed')
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || 'Checkout failed')
+      }
 
       const data = await res.json()
       localStorage.removeItem('yarkaita_cart')
       setCart([])
       alert(`Order ${data.order.orderNumber} completed successfully! Total: ₦${total.toLocaleString()}`)
+
+      // Show bank details for payment
+      const bankDetails = {
+        bankName: 'Access Bank',
+        accountNumber: '1234567890',
+        accountName: 'YARKAITA FASHION',
+      }
+      alert(`Please transfer to:\nBank: ${bankDetails.bankName}\nAccount: ${bankDetails.accountNumber}\nName: ${bankDetails.accountName}`)
+
       router.push('/')
     } catch (err) {
-      console.error(err)
+      console.error('Checkout error:', err)
       alert('Checkout failed. Please try again.')
     } finally {
       setCheckingOut(false)
@@ -93,7 +119,12 @@ export default function CartPage() {
       </nav>
 
       <div className="container mx-auto py-10">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Your Cart</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Your Cart</h1>
+          <button onClick={loadCart} className="bg-gray-200 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-300">
+            Refresh Cart
+          </button>
+        </div>
 
         {cart.length === 0 ? (
           <p className="text-gray-600">Your cart is empty.</p>

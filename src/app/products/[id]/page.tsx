@@ -64,7 +64,7 @@ export default function ProductDetailPage() {
           </div>
           <div className="space-x-6 font-semibold">
             <Link href="/" className="hover:text-gray-300 transition">Home</Link>
-            <Link href="/custom-request" className="hover:text-gray-300 transition">Custom Request</Link>
+            <Link href="/products" className="hover:text-gray-300 transition">Products</Link>
             <Link href="/cart" className="hover:text-gray-300 transition">Cart</Link>
           </div>
         </div>
@@ -72,7 +72,6 @@ export default function ProductDetailPage() {
 
       <div className="container mx-auto py-10">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* An gyara nan: aspect-[9/16] */}
           <div className="bg-gray-200 rounded-xl flex items-center justify-center aspect-[3/4]">
             {product.media?.[0] ? (
               <img src={product.media[0].url} alt={product.name} className="h-full w-full object-cover rounded-xl" />
