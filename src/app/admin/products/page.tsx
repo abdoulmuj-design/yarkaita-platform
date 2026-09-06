@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useLanguage } from '@/lib/LanguageContext'
+import Link from 'next/link'
 
 export default function AdminProductsPage() {
   const { language } = useLanguage()
@@ -12,6 +13,7 @@ export default function AdminProductsPage() {
   const translations = {
     en: {
       title: 'Products',
+      addNew: 'Add New Product',
       loading: 'Loading products...',
       error: 'Failed to load products',
       noProducts: 'No products found.',
@@ -20,9 +22,11 @@ export default function AdminProductsPage() {
       variants: 'Variants',
       price: 'Price',
       status: 'Status',
+      edit: 'Edit',
     },
     ha: {
       title: 'Samfura',
+      addNew: 'Ƙara Sabon Samfuri',
       loading: 'Ana loda samfura...',
       error: 'An kasa loda samfura',
       noProducts: 'Babu samfura da aka samu.',
@@ -31,6 +35,7 @@ export default function AdminProductsPage() {
       variants: 'Bambance-bambance',
       price: 'Farashi',
       status: 'Matsayi',
+      edit: 'Gyara',
     },
   }
 
@@ -57,7 +62,12 @@ export default function AdminProductsPage() {
 
   return (
     <div>
-      <h2 className="text-3xl font-extrabold text-gray-900 mb-6">{t.title}</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-3xl font-extrabold text-gray-900">{t.title}</h2>
+        <Link href="/admin/products/new" className="bg-black text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-800 transition">
+          {t.addNew}
+        </Link>
+      </div>
 
       {loading ? (
         <p className="text-gray-600">{t.loading}</p>
@@ -75,6 +85,7 @@ export default function AdminProductsPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.variants}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.price}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.status}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.edit}</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -92,6 +103,11 @@ export default function AdminProductsPage() {
                     }`}>
                       {product.isActive ? 'Active' : 'Inactive'}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <Link href={`/admin/products/${product.id}`} className="text-blue-600 hover:text-blue-800">
+                      {t.edit}
+                    </Link>
                   </td>
                 </tr>
               ))}

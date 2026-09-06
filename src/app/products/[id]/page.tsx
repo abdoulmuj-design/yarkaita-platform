@@ -9,6 +9,7 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState<any>(null)
   const [selectedVariant, setSelectedVariant] = useState<any>(null)
   const [quantity, setQuantity] = useState(1)
+  const [currentImage, setCurrentImage] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -55,6 +56,9 @@ export default function ProductDetailPage() {
   if (loading) return <p className="text-center text-gray-600">Loading...</p>
   if (!product) return <p className="text-center text-red-600">Product not found</p>
 
+  // Total number of images
+  const totalImages = product.media?.length || 0
+
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-black text-white p-4 shadow-lg">
@@ -72,14 +76,57 @@ export default function ProductDetailPage() {
 
       <div className="container mx-auto py-10">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="bg-gray-200 rounded-xl flex items-center justify-center aspect-[3/4]">
-            {product.media?.[0] ? (
-              <img src={product.media[0].url} alt={product.name} className="h-full w-full object-cover rounded-xl" />
-            ) : (
-              <span className="text-gray-400">No Image</span>
+          {/* Image Slider */}
+          <div className="bg-gray-200 rounded-xl flex flex-col items-center justify-center aspect-[3/4]">
+            <div className="w-full h-full flex items-center justify-center relative">
+              {product.media?.[currentImage] ? (
+                <img
+                  src={product.media[currentImage].url}
+                  alt={product.name}
+                  className="h-full w-full object-cover rounded-xl"
+                />
+              ) : (
+                <span className="text-gray-400">No Image</span>
+              )}
+
+              {/* Navigation Buttons */}
+              {totalImages > 1 && (
+                <>
+                  <button
+                    onClick={() => setCurrentImage((prev) => (prev - 1 + totalImages) % totalImages)}
+                    className="absolute left-2 bg-black/50 text-white p-2 rounded-full hover:bg-black"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    onClick={() => setCurrentImage((prev) => (prev + 1) % totalImages)}
+                    className="absolute right-2 bg-black/50 text-white p-2 rounded-full hover:bg-black"
+                  >
+                    ›
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Thumbnails */}
+            {totalImages > 1 && (
+              <div className="flex gap-2 mt-4 p-2">
+                {product.media.map((img: any, index: number) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentImage(index)}
+                    className={`w-16 h-16 rounded-lg overflow-hidden border-2 ${
+                      currentImage === index ? 'border-black' : 'border-gray-300'
+                    }`}
+                  >
+                    <img src={img.url} alt={`Image ${index + 1}`} className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
             )}
           </div>
 
+          {/* Product Info */}
           <div>
             <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
             <p className="text-gray-600 mt-2">{product.description}</p>

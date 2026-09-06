@@ -30,17 +30,12 @@ export default function AdminLoginPage() {
         return
       }
 
-      // Check if user is admin
-      if (data.role !== 'ADMIN') {
-        setError('This account is not authorized for admin access.')
-        setLoading(false)
-        return
-      }
-
+      // Store token and user
       localStorage.setItem('yarkaita_token', data.token)
       localStorage.setItem('yarkaita_user', JSON.stringify(data.user))
       document.cookie = `yarkaita_token=${data.token}; path=/; max-age=86400`
 
+      // Redirect to admin dashboard
       router.push('/admin')
     } catch (err) {
       setError('An error occurred. Please try again.')

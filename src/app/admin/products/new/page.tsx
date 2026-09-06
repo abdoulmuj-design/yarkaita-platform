@@ -18,6 +18,7 @@ export default function NewProductPage() {
     setLoading(true)
     try {
       const token = localStorage.getItem('yarkaita_token')
+      
       // 1. Create Product
       const productRes = await fetch('/api/products', {
         method: 'POST',
@@ -26,7 +27,7 @@ export default function NewProductPage() {
       })
       const product = await productRes.json()
 
-      // 2. Upload images
+      // 2. Upload images (5+)
       for (const file of images) {
         const formData = new FormData()
         formData.append('file', file)
@@ -99,7 +100,7 @@ export default function NewProductPage() {
         </div>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Upload Images</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Upload Images (5+)</label>
           <input type="file" accept="image/*" multiple onChange={(e) => setImages(Array.from(e.target.files || []))} className="w-full px-3 py-2 border rounded" />
           <p className="text-xs text-gray-500 mt-1">Upload 5+ images for this product.</p>
         </div>

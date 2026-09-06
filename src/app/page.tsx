@@ -25,6 +25,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
+      {/* Navbar */}
       <nav className="bg-black text-white p-4 shadow-lg">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-3">
@@ -32,12 +33,14 @@ export default function HomePage() {
           </div>
           <div className="space-x-6 font-semibold">
             <Link href="/" className="hover:text-gray-300 transition">Home</Link>
+            <Link href="/products" className="hover:text-gray-300 transition">Products</Link>
             <Link href="/custom-request" className="hover:text-gray-300 transition">Custom Request</Link>
             <Link href="/cart" className="hover:text-gray-300 transition">Cart</Link>
           </div>
         </div>
       </nav>
 
+      {/* Hero Section */}
       <div className="bg-black text-white py-12">
         <div className="container mx-auto text-center">
           <h1 className="text-4xl font-bold tracking-wide">YARKAITA</h1>
@@ -45,6 +48,7 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* Products Grid */}
       <div className="container mx-auto py-10 flex-1">
         <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">Our Products</h2>
         {loading ? (
@@ -56,7 +60,6 @@ export default function HomePage() {
             {products.map((product) => (
               <Link key={product.id} href={`/products/${product.id}`} className="block">
                 <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition">
-                  {/* An gyara nan: aspect-[9/16] */}
                   <div className="bg-gray-200 aspect-[3/4] flex items-center justify-center">
                     {product.media?.[0] ? (
                       <img src={product.media[0].url} alt={product.name} className="h-full w-full object-cover" />
@@ -78,10 +81,16 @@ export default function HomePage() {
         )}
       </div>
 
+      {/* Footer */}
       <footer className="bg-black text-white py-6 mt-10">
         <div className="container mx-auto text-center">
           <p>© 2026 YARKAITA. All rights reserved.</p>
           <p className="mt-2 text-gray-400 text-sm">Designed & Built by abdoulmuj-design</p>
+          <p className="mt-4">
+            <Link href="/admin/login" className="text-gray-400 hover:text-white underline">
+              Admin Login
+            </Link>
+          </p>
         </div>
       </footer>
     </div>
