@@ -436,6 +436,7 @@ model Payment {
   reference String   @unique
   amount    Float
   status    String   @default("SUCCESSFUL") // FAILED, SUCCESSFUL, REFUNDED
+    receiptUrl    String?
   createdAt DateTime @default(now())
 
   @@index([orderId])

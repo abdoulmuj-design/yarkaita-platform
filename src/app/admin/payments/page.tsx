@@ -20,6 +20,8 @@ export default function AdminPaymentsPage() {
       amount: 'Amount',
       status: 'Status',
       date: 'Date',
+      receipt: 'Receipt',
+      view: 'View',
     },
     ha: {
       title: 'Biyan Kuɗi',
@@ -31,6 +33,8 @@ export default function AdminPaymentsPage() {
       amount: 'Adadin',
       status: 'Matsayi',
       date: 'Kwanan wata',
+      receipt: 'Rasit',
+      view: 'Duba',
     },
   }
 
@@ -75,6 +79,7 @@ export default function AdminPaymentsPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.amount}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.status}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.date}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.receipt}</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -93,6 +98,15 @@ export default function AdminPaymentsPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(payment.createdAt).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {payment.receiptUrl ? (
+                      <a href={payment.receiptUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
+                        {t.view}
+                      </a>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -9,9 +9,10 @@ export default function CartPage() {
   const [cart, setCart] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [checkingOut, setCheckingOut] = useState(false)
-  const [showPaymentInfo, setShowPaymentInfo] = useState(false)
+  const [receiptFile, setReceiptFile] = useState<File | null>(null)
+  const [paymentId, setPaymentId] = useState<string | null>(null)
+  const [showBankDetails, setShowBankDetails] = useState(false)
   const [orderNumber, setOrderNumber] = useState('')
-  const [receipt, setReceipt] = useState<File | null>(null)
 
   function loadCart() {
     try {
@@ -45,6 +46,7 @@ export default function CartPage() {
 
   const total = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
 
+  // Bank details (Dole ka canza zuwa na hakika na YARKAITA)
   const bankDetails = {
     bankName: 'Access Bank',
     accountNumber: '1234567890',
@@ -54,7 +56,7 @@ export default function CartPage() {
   async function handleCheckout() {
     setCheckingOut(true)
     try {
-      // Don logout ko admin, ko walk-in, muna ƙirƙirar Customer na walk-in
+      // 1. Create Walk-In Customer
       const customerRes = await fetch('/api/customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -72,7 +74,7 @@ export default function CartPage() {
 
       const customerId = customer.id
 
-      // Yanzu mu ƙirƙiri Order da Payment
+      // 2. Create Order & Payment
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -89,42 +91,70 @@ export default function CartPage() {
       }
 
       const data = await res.json()
+      
+      // Ajiye Order Number da Payment ID
       setOrderNumber(data.order.orderNumber)
+      setPaymentId(data.payment.id)
+      
+      // Cire cart daga localStorage
       localStorage.removeItem('yarkaita_cart')
       setCart([])
-      setShowPaymentInfo(true)
+      
+      // Yanzu nuna bayanin banki (UI)
+      setShowBankDetails(true)
+      setCheckingOut(false)
+      
     } catch (err) {
       console.error('Checkout error:', err)
       alert('Checkout failed. Please try again.')
+      setCheckingOut(false)
+    }
+  }
+
+  async function handleReceiptUpload() {
+    if (!receiptFile || !paymentId) {
+      alert('Please select a receipt file first.')
+      return
+    }
+
+    setCheckingOut(true)
+    try {
+      // 1. Upload file
+      const formData = new FormData()
+      formData.append('file', receiptFile)
+      const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData })
+      const uploadData = await uploadRes.json()
+
+      if (!uploadData.url) {
+        throw new Error('Upload failed')
+      }
+
+      // 2. Update Payment with receiptUrl
+      const updateRes = await fetch(`/api/payments/${paymentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ receiptUrl: uploadData.url }),
+      })
+
+      if (!updateRes.ok) {
+        throw new Error('Failed to update receipt')
+      }
+
+      alert('Receipt uploaded successfully! We will verify your payment shortly.')
+      setShowBankDetails(false)
+      setReceiptFile(null)
+      router.push('/')
+    } catch (err) {
+      console.error('Upload error:', err)
+      alert('Failed to upload receipt. Please try again.')
     } finally {
       setCheckingOut(false)
     }
   }
 
-  function handleCopyAccountNumber() {
+  function copyAccountNumber() {
     navigator.clipboard.writeText(bankDetails.accountNumber)
     alert('Account number copied!')
-  }
-
-  async function handleUploadReceipt() {
-    if (!receipt) {
-      alert('Please select a receipt file first.')
-      return
-    }
-
-    const formData = new FormData()
-    formData.append('file', receipt)
-    
-    const res = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData,
-    })
-    const data = await res.json()
-    
-    // A nan za mu iya haɗa receipt URL tare da order (a nan dai an ajiye shi a upload folder)
-    alert('Receipt uploaded! You can now complete your payment.')
-    // Za mu iya sake tura shi zuwa shafin gida
-    router.push('/')
   }
 
   if (loading) return <p className="text-center text-gray-600">Loading cart...</p>
@@ -145,40 +175,6 @@ export default function CartPage() {
       </nav>
 
       <div className="container mx-auto py-10">
-        {/* Payment Instructions Section */}
-        {showPaymentInfo && (
-          <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-8">
-            <h2 className="text-xl font-bold text-green-800 mb-2">Payment Instructions</h2>
-            <p className="text-green-700 mb-4">Order <strong>{orderNumber}</strong> created. Please transfer the total amount to the account below:</p>
-            
-            <div className="bg-white p-4 rounded-lg shadow mb-4">
-              <p className="text-gray-700"><strong>Bank:</strong> {bankDetails.bankName}</p>
-              <p className="text-gray-700"><strong>Account Number:</strong> {bankDetails.accountNumber}</p>
-              <p className="text-gray-700"><strong>Account Name:</strong> {bankDetails.accountName}</p>
-              <button
-                onClick={handleCopyAccountNumber}
-                className="mt-2 bg-black text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-800"
-              >
-                Copy Account Number
-              </button>
-            </div>
-
-            <p className="text-green-700 mb-2">Upload your payment receipt for verification:</p>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setReceipt(e.target.files?.[0] || null)}
-              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-600 file:text-white hover:file:bg-green-700"
-            />
-            <button
-              onClick={handleUploadReceipt}
-              className="mt-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-700"
-            >
-              Upload Receipt
-            </button>
-          </div>
-        )}
-
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Your Cart</h1>
           <button onClick={loadCart} className="bg-gray-200 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-300">
@@ -186,36 +182,72 @@ export default function CartPage() {
           </button>
         </div>
 
-        {cart.length === 0 ? (
-          <p className="text-gray-600">Your cart is empty.</p>
-        ) : (
-          <div className="bg-white rounded-xl shadow-md p-6">
-            {cart.map((item) => (
-              <div key={item.variantId} className="border-b py-4 flex justify-between items-center">
-                <div>
-                  <h3 className="font-semibold text-gray-900">{item.productName}</h3>
-                  <p className="text-sm text-gray-500">
-                    {item.color} / {item.size} - ₦{item.unitPrice.toLocaleString()}
-                  </p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <button onClick={() => handleQuantityChange(item.variantId, -1)} className="bg-gray-200 px-3 py-1 rounded-lg">-</button>
-                  <span>{item.quantity}</span>
-                  <button onClick={() => handleQuantityChange(item.variantId, 1)} className="bg-gray-200 px-3 py-1 rounded-lg">+</button>
-                  <button onClick={() => handleRemove(item.variantId)} className="text-red-500 hover:text-red-700">✕</button>
-                </div>
-              </div>
-            ))}
-            <div className="mt-6 text-right">
-              <p className="text-2xl font-bold text-gray-900">Total: ₦{total.toLocaleString()}</p>
-              <button
-                onClick={handleCheckout}
-                disabled={checkingOut}
-                className="bg-green-600 text-white py-3 px-8 rounded-lg font-semibold hover:bg-green-700 transition mt-4 disabled:opacity-50"
-              >
-                {checkingOut ? 'Processing...' : 'Checkout'}
+        {/* Bayan da an kammala checkout, mu nuna bank details */}
+        {showBankDetails ? (
+          <div className="bg-white rounded-xl shadow-md p-6 max-w-lg mx-auto">
+            <h2 className="text-2xl font-bold mb-4">Payment Details</h2>
+            <p className="text-gray-600 mb-4">Order {orderNumber} created! Please transfer:</p>
+            
+            <div className="bg-gray-100 p-4 rounded-lg mb-4">
+              <p className="text-sm text-gray-600">Bank Name: <strong>{bankDetails.bankName}</strong></p>
+              <p className="text-sm text-gray-600 mt-2">Account Number: <strong>{bankDetails.accountNumber}</strong></p>
+              <p className="text-sm text-gray-600 mt-2">Account Name: <strong>{bankDetails.accountName}</strong></p>
+              <button onClick={copyAccountNumber} className="mt-3 bg-black text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-800">
+                Copy Account Number
               </button>
             </div>
+
+            <label className="block text-sm font-medium text-gray-700 mb-2">Upload Payment Receipt (Reference)</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800"
+            />
+            <p className="text-xs text-gray-500 mt-1">Upload screenshot after you transfer.</p>
+
+            <button
+              onClick={handleReceiptUpload}
+              disabled={checkingOut}
+              className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition mt-4 disabled:opacity-50"
+            >
+              {checkingOut ? 'Uploading...' : 'Upload Receipt & Complete Order'}
+            </button>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl shadow-md p-6">
+            {cart.length === 0 ? (
+              <p className="text-gray-600">Your cart is empty.</p>
+            ) : (
+              <>
+                {cart.map((item) => (
+                  <div key={item.variantId} className="border-b py-4 flex justify-between items-center">
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{item.productName}</h3>
+                      <p className="text-sm text-gray-500">
+                        {item.color} / {item.size} - ₦{item.unitPrice.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <button onClick={() => handleQuantityChange(item.variantId, -1)} className="bg-gray-200 px-3 py-1 rounded-lg">-</button>
+                      <span>{item.quantity}</span>
+                      <button onClick={() => handleQuantityChange(item.variantId, 1)} className="bg-gray-200 px-3 py-1 rounded-lg">+</button>
+                      <button onClick={() => handleRemove(item.variantId)} className="text-red-500 hover:text-red-700">✕</button>
+                    </div>
+                  </div>
+                ))}
+                <div className="mt-6 text-right">
+                  <p className="text-2xl font-bold text-gray-900">Total: ₦{total.toLocaleString()}</p>
+                  <button
+                    onClick={handleCheckout}
+                    disabled={checkingOut}
+                    className="bg-green-600 text-white py-3 px-8 rounded-lg font-semibold hover:bg-green-700 transition mt-4 disabled:opacity-50"
+                  >
+                    {checkingOut ? 'Processing...' : 'Checkout'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>

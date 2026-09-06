@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST(request: Request) {
   const body = await request.json()
-  const { customerId, items, salesChannel, address } = body
+  const { customerId, items, salesChannel, address, receiptUrl } = body
 
   if (!customerId || !items || items.length === 0) {
     return NextResponse.json({ error: 'customerId and items are required' }, { status: 400 })
@@ -56,6 +56,7 @@ export async function POST(request: Request) {
       amount: totalAmount,
       reference: `PAY-${Date.now()}`,
       status: 'SUCCESSFUL',
+      receiptUrl: receiptUrl || null, // An ƙara wannan layin
     },
   })
 
