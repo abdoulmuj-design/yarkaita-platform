@@ -81,16 +81,11 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Footer */}
+      {/* Footer - Babu Admin Login Link */}
       <footer className="bg-black text-white py-6 mt-10">
         <div className="container mx-auto text-center">
           <p>© 2026 YARKAITA. All rights reserved.</p>
           <p className="mt-2 text-gray-400 text-sm">Designed & Built by abdoulmuj-design</p>
-          <p className="mt-4">
-            <Link href="/admin/login" className="text-gray-400 hover:text-white underline">
-              Admin Login
-            </Link>
-          </p>
         </div>
       </footer>
     </div>
