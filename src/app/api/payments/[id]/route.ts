@@ -7,11 +7,23 @@ export async function PUT(
 ) {
   const { id } = await params
   const body = await request.json()
-  const { receiptUrl } = body
+  const { receiptUrl, status } = body // status zai zama 'APPROVED' ko 'SUCCESSFUL'
 
   const payment = await prisma.payment.update({
     where: { id },
-    data: { receiptUrl },
+    data: { receiptUrl, status },
   })
+
+  // Idan admin ya approve (SUCCESSFUL), mu canza Order status zuwa CONFIRMED
+  if (status === 'SUCCESSFUL') {
+    const fullPayment = await prisma.payment.findUnique({ where: { id } })
+    if (fullPayment) {
+      await prisma.order.update({
+        where: { id: fullPayment.orderId },
+        data: { status: 'CONFIRMED' },
+      })
+    }
+  }
+
   return NextResponse.json(payment)
 }

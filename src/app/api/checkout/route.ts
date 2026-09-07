@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST(request: Request) {
   const body = await request.json()
-  const { customerId, items, salesChannel, address, receiptUrl } = body
+  const { customerId, items, salesChannel, address, receiptUrl, phone, email } = body
 
   if (!customerId || !items || items.length === 0) {
     return NextResponse.json({ error: 'customerId and items are required' }, { status: 400 })
@@ -18,13 +18,14 @@ export async function POST(request: Request) {
     totalAmount += item.unitPrice * item.quantity
   }
 
-  // Create order
+  // Create order (Initial status: PENDING)
   const order = await prisma.order.create({
     data: {
       orderNumber,
       customerId,
       salesChannel: salesChannel || 'WEBSITE',
       totalAmount,
+      status: 'PENDING', // An gyara nan
       items: {
         create: items.map((item: any) => ({
           productName: item.productName,
@@ -49,21 +50,15 @@ export async function POST(request: Request) {
     },
   })
 
-  // Create payment (simulated successful payment)
+  // Create payment (Initial status: PENDING)
   const payment = await prisma.payment.create({
     data: {
       orderId: order.id,
       amount: totalAmount,
       reference: `PAY-${Date.now()}`,
-      status: 'SUCCESSFUL',
-      receiptUrl: receiptUrl || null, // An ƙara wannan layin
+      status: 'PENDING', // An gyara nan
+      receiptUrl: receiptUrl || null,
     },
-  })
-
-  // Update order status to CONFIRMED
-  await prisma.order.update({
-    where: { id: order.id },
-    data: { status: 'CONFIRMED' },
   })
 
   return NextResponse.json({ order, payment }, { status: 201 })

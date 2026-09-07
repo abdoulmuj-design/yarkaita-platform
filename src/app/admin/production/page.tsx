@@ -6,8 +6,10 @@ import { useLanguage } from '@/lib/LanguageContext'
 export default function AdminProductionPage() {
   const { language } = useLanguage()
   const [jobs, setJobs] = useState<any[]>([])
+  const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [selectedUser, setSelectedUser] = useState<{ [taskId: string]: string }>({})
 
   const translations = {
     en: {
@@ -20,6 +22,10 @@ export default function AdminProductionPage() {
       status: 'Status',
       priority: 'Priority',
       date: 'Date',
+      tasks: 'Tasks',
+      assign: 'Assign Staff',
+      assignBtn: 'Assign',
+      noUser: 'Select Staff',
     },
     ha: {
       title: 'Ayyukan Samarwa',
@@ -31,41 +37,69 @@ export default function AdminProductionPage() {
       status: 'Matsayi',
       priority: 'Muhimmanci',
       date: 'Kwanan wata',
+      tasks: 'Ayyuka',
+      assign: 'Sanya Ma\'aikaci',
+      assignBtn: 'Sanya',
+      noUser: 'Zaɓi Ma\'aikaci',
     },
   }
 
   const t = translations[language]
 
   useEffect(() => {
-    async function fetchJobs() {
+    async function fetchData() {
       try {
         const token = localStorage.getItem('yarkaita_token')
-        
-        if (!token) {
-          setJobs([])
-          setLoading(false)
-          return
-        }
+        const headers = { 'Authorization': `Bearer ${token}` }
 
-        const res = await fetch('/api/production/jobs', {
-          headers: { 'Authorization': `Bearer ${token}` },
-        })
-        if (!res.ok) throw new Error('Failed to fetch production jobs')
-        const data = await res.json()
+        const [jobsRes, usersRes] = await Promise.all([
+          fetch('/api/production/jobs', { headers }),
+          fetch('/api/users', { headers }),
+        ])
+
+        const jobsData = await jobsRes.json()
+        const usersData = await usersRes.json()
         
-        if (Array.isArray(data)) {
-          setJobs(data)
-        } else {
-          setJobs([])
-        }
+        setJobs(Array.isArray(jobsData) ? jobsData : [])
+        setUsers(Array.isArray(usersData) ? usersData : [])
       } catch (err) {
         setError(t.error)
       } finally {
         setLoading(false)
       }
     }
-    fetchJobs()
+    fetchData()
   }, [language])
+
+  async function handleAssign(taskId: string) {
+    const userId = selectedUser[taskId]
+    if (!userId) {
+      alert('Please select a staff member first.')
+      return
+    }
+
+    try {
+      const token = localStorage.getItem('yarkaita_token')
+      const res = await fetch(`/api/production/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ assignedUserId: userId }),
+      })
+
+      if (!res.ok) throw new Error('Failed to assign task')
+
+      alert('Task assigned successfully!')
+      // Refetch jobs
+      const updated = await fetch('/api/production/jobs', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      })
+      const data = await updated.json()
+      setJobs(Array.isArray(data) ? data : [])
+    } catch (err) {
+      console.error(err)
+      alert('Failed to assign task')
+    }
+  }
 
   return (
     <div>
@@ -78,37 +112,63 @@ export default function AdminProductionPage() {
       ) : jobs.length === 0 ? (
         <p className="text-gray-600">{t.noJobs}</p>
       ) : (
-        <div className="overflow-x-auto bg-white rounded-lg shadow">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.jobNumber}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.order}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.status}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.priority}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.date}</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {jobs.map((job) => (
-                <tr key={job.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{job.jobNumber}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{job.order?.orderNumber || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      job.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-                      job.status === 'CANCELLED' ? 'bg-red-100 text-red-800' :
-                      'bg-blue-100 text-blue-800'
-                    }`}>
-                      {job.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{job.priority}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(job.createdAt).toLocaleDateString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-6">
+          {jobs.map((job) => (
+            <div key={job.id} className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h3 className="font-bold text-lg">{job.jobNumber}</h3>
+                  <p className="text-sm text-gray-500">{job.order?.orderNumber || '-'}</p>
+                </div>
+                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                  job.status === 'COMPLETED' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                }`}>
+                  {job.status}
+                </span>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-semibold mb-2">{t.tasks}</h4>
+                {job.tasks?.length === 0 ? (
+                  <p className="text-gray-500">No tasks yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {job.tasks?.map((task: any) => (
+                      <div key={task.id} className="flex justify-between items-center bg-gray-50 p-3 rounded">
+                        <div>
+                          <p className="font-medium">{task.taskType}</p>
+                          <p className="text-sm text-gray-500">{task.department}</p>
+                          {task.assignedUser && (
+                            <p className="text-sm text-green-600">Assigned to: {task.assignedUser.name}</p>
+                          )}
+                        </div>
+                        {!task.assignedUser && (
+                          <div className="flex gap-2">
+                            <select
+                              value={selectedUser[task.id] || ''}
+                              onChange={(e) => setSelectedUser({ ...selectedUser, [task.id]: e.target.value })}
+                              className="px-2 py-1 border rounded text-sm"
+                            >
+                              <option value="">{t.noUser}</option>
+                              {users.map((user) => (
+                                <option key={user.id} value={user.id}>{user.name} ({user.roles?.[0]?.role?.name || 'No Role'})</option>
+                              ))}
+                            </select>
+                            <button
+                              onClick={() => handleAssign(task.id)}
+                              className="bg-black text-white px-3 py-1 rounded text-sm hover:bg-gray-800"
+                            >
+                              {t.assignBtn}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

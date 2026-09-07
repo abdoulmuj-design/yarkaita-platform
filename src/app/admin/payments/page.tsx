@@ -22,6 +22,9 @@ export default function AdminPaymentsPage() {
       date: 'Date',
       receipt: 'Receipt',
       view: 'View',
+      approve: 'Approve',
+      success: 'SUCCESSFUL',
+      pending: 'PENDING',
     },
     ha: {
       title: 'Biyan Kuɗi',
@@ -35,6 +38,9 @@ export default function AdminPaymentsPage() {
       date: 'Kwanan wata',
       receipt: 'Rasit',
       view: 'Duba',
+      approve: 'Amince',
+      success: 'SUCCESSFUL',
+      pending: 'PENDING',
     },
   }
 
@@ -59,6 +65,28 @@ export default function AdminPaymentsPage() {
     fetchPayments()
   }, [language])
 
+  async function handleApprove(paymentId: string) {
+    try {
+      const token = localStorage.getItem('yarkaita_token')
+      const res = await fetch(`/api/payments/${paymentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: 'SUCCESSFUL' }),
+      })
+      if (!res.ok) throw new Error('Failed to approve payment')
+      alert('Payment approved successfully! Order has been confirmed.')
+      // Refetch payments
+      const updated = await fetch('/api/payments', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      })
+      const data = await updated.json()
+      setPayments(data)
+    } catch (err) {
+      console.error(err)
+      alert('Failed to approve payment')
+    }
+  }
+
   return (
     <div>
       <h2 className="text-3xl font-extrabold text-gray-900 mb-6">{t.title}</h2>
@@ -80,6 +108,7 @@ export default function AdminPaymentsPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.status}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.date}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.receipt}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -91,8 +120,8 @@ export default function AdminPaymentsPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       payment.status === 'SUCCESSFUL' ? 'bg-green-100 text-green-800' :
-                      payment.status === 'FAILED' ? 'bg-red-100 text-red-800' :
-                      'bg-yellow-100 text-yellow-800'
+                      payment.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
                     }`}>
                       {payment.status}
                     </span>
@@ -103,6 +132,18 @@ export default function AdminPaymentsPage() {
                       <a href={payment.receiptUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
                         {t.view}
                       </a>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {payment.status === 'PENDING' ? (
+                      <button
+                        onClick={() => handleApprove(payment.id)}
+                        className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition"
+                      >
+                        {t.approve}
+                      </button>
                     ) : (
                       <span className="text-gray-400">-</span>
                     )}

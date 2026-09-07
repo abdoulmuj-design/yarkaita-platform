@@ -9,9 +9,19 @@ export default function CartPage() {
   const [cart, setCart] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [checkingOut, setCheckingOut] = useState(false)
+
+  // Walk-in Customer Details
+  const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
+  const [address, setAddress] = useState('')
+  const [city, setCity] = useState('')
+  const [state, setState] = useState('')
+
   const [receiptFile, setReceiptFile] = useState<File | null>(null)
   const [paymentId, setPaymentId] = useState<string | null>(null)
   const [showBankDetails, setShowBankDetails] = useState(false)
+  const [showPendingMessage, setShowPendingMessage] = useState(false)
   const [orderNumber, setOrderNumber] = useState('')
 
   function loadCart() {
@@ -46,7 +56,6 @@ export default function CartPage() {
 
   const total = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
 
-  // Bank details (Dole ka canza zuwa na hakika na YARKAITA)
   const bankDetails = {
     bankName: 'Access Bank',
     accountNumber: '1234567890',
@@ -56,25 +65,25 @@ export default function CartPage() {
   async function handleCheckout() {
     setCheckingOut(true)
     try {
-      // 1. Create Walk-In Customer
+      // 1. Create Walk-In Customer (with details)
       const customerRes = await fetch('/api/customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          firstName: 'Walk-In',
+          firstName: name || 'Walk-In',
           lastName: 'Customer',
+          phone: phone,
+          email: email,
           acquisitionSource: 'WEBSITE',
         }),
       })
       const customer = await customerRes.json()
       
-      if (!customerRes.ok) {
-        throw new Error(customer.error || 'Failed to create customer')
-      }
+      if (!customerRes.ok) throw new Error(customer.error || 'Failed to create customer')
 
       const customerId = customer.id
 
-      // 2. Create Order & Payment
+      // 2. Create Order & Payment (Status: PENDING)
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -82,6 +91,8 @@ export default function CartPage() {
           customerId,
           salesChannel: 'WEBSITE',
           items: cart,
+          receiptUrl: null,
+          address: address ? { address, city, state } : undefined,
         }),
       })
 
@@ -92,15 +103,12 @@ export default function CartPage() {
 
       const data = await res.json()
       
-      // Ajiye Order Number da Payment ID
       setOrderNumber(data.order.orderNumber)
       setPaymentId(data.payment.id)
       
-      // Cire cart daga localStorage
       localStorage.removeItem('yarkaita_cart')
       setCart([])
       
-      // Yanzu nuna bayanin banki (UI)
       setShowBankDetails(true)
       setCheckingOut(false)
       
@@ -119,28 +127,22 @@ export default function CartPage() {
 
     setCheckingOut(true)
     try {
-      // 1. Upload file
       const formData = new FormData()
       formData.append('file', receiptFile)
       const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData })
       const uploadData = await uploadRes.json()
 
-      if (!uploadData.url) {
-        throw new Error('Upload failed')
-      }
+      if (!uploadData.url) throw new Error('Upload failed')
 
-      // 2. Update Payment with receiptUrl
-      const updateRes = await fetch(`/api/payments/${paymentId}`, {
+      // Update Payment with receiptUrl (Status stays PENDING)
+      await fetch(`/api/payments/${paymentId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ receiptUrl: uploadData.url }),
       })
 
-      if (!updateRes.ok) {
-        throw new Error('Failed to update receipt')
-      }
-
-      alert('Receipt uploaded successfully! We will verify your payment shortly.')
+      alert('Receipt uploaded! Payment is now pending admin approval.')
+      setShowPendingMessage(true)
       setShowBankDetails(false)
       setReceiptFile(null)
       router.push('/')
@@ -182,8 +184,13 @@ export default function CartPage() {
           </button>
         </div>
 
-        {/* Bayan da an kammala checkout, mu nuna bank details */}
-        {showBankDetails ? (
+        {showPendingMessage ? (
+          <div className="bg-white rounded-xl shadow-md p-6 text-center max-w-lg mx-auto">
+            <h2 className="text-2xl font-bold mb-4">Payment Pending Approval</h2>
+            <p className="text-gray-600">Your receipt has been submitted. Please wait for YARKAITA to confirm your payment.</p>
+            <Link href="/" className="text-blue-600 hover:underline mt-4 block">Back to Home</Link>
+          </div>
+        ) : showBankDetails ? (
           <div className="bg-white rounded-xl shadow-md p-6 max-w-lg mx-auto">
             <h2 className="text-2xl font-bold mb-4">Payment Details</h2>
             <p className="text-gray-600 mb-4">Order {orderNumber} created! Please transfer:</p>
@@ -211,7 +218,7 @@ export default function CartPage() {
               disabled={checkingOut}
               className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition mt-4 disabled:opacity-50"
             >
-              {checkingOut ? 'Uploading...' : 'Upload Receipt & Complete Order'}
+              {checkingOut ? 'Uploading...' : 'Upload Receipt & Submit'}
             </button>
           </div>
         ) : (
@@ -220,6 +227,19 @@ export default function CartPage() {
               <p className="text-gray-600">Your cart is empty.</p>
             ) : (
               <>
+                {/* Walk-in Customer Form */}
+                <div className="border-b pb-4 mb-4">
+                  <h3 className="text-lg font-semibold mb-2">Your Details (for delivery)</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <input type="text" placeholder="Full Name" value={name} onChange={(e) => setName(e.target.value)} className="px-3 py-2 border rounded" />
+                    <input type="text" placeholder="Phone Number" value={phone} onChange={(e) => setPhone(e.target.value)} className="px-3 py-2 border rounded" />
+                    <input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} className="px-3 py-2 border rounded" />
+                    <input type="text" placeholder="Address" value={address} onChange={(e) => setAddress(e.target.value)} className="px-3 py-2 border rounded" />
+                    <input type="text" placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} className="px-3 py-2 border rounded" />
+                    <input type="text" placeholder="State" value={state} onChange={(e) => setState(e.target.value)} className="px-3 py-2 border rounded" />
+                  </div>
+                </div>
+
                 {cart.map((item) => (
                   <div key={item.variantId} className="border-b py-4 flex justify-between items-center">
                     <div>
