@@ -1,24 +1,49 @@
 // YARKAITA PLATFORM - Prisma Schema
 // Full Schema: Foundation + Catalog + Inventory + Commerce + Production + Bespoke/Bridal + System
+// Compatible with PostgreSQL
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ========== ENUMS ==========
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum CustomerAcquisitionSource {
+  INSTAGRAM
+  WHATSAPP
+  TIKTOK
+  WALK_IN
+  REFERRAL
+  WEBSITE
+  OTHER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
 }
 
 // ========== USER & AUTH ==========
 
 model User {
-  id           String     @id @default(uuid())
+  id           String     @id @default(uuid()) @db.Uuid
   email        String?    @unique
   phone        String?    @unique
   passwordHash String
   name         String
-  status       String     @default("ACTIVE")
+  status       UserStatus @default(ACTIVE)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -36,8 +61,8 @@ model User {
 }
 
 model StaffProfile {
-  id           String   @id @default(uuid())
-  userId       String   @unique
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @unique @db.Uuid
   employeeCode String   @unique
   department   String
   position     String
@@ -50,7 +75,7 @@ model StaffProfile {
 }
 
 model Role {
-  id          String     @id @default(uuid())
+  id          String     @id @default(uuid()) @db.Uuid
   name        String     @unique
   description String?
   isActive    Boolean    @default(true)
@@ -62,7 +87,7 @@ model Role {
 }
 
 model Permission {
-  id          String     @id @default(uuid())
+  id          String     @id @default(uuid()) @db.Uuid
   name        String     @unique
   description String?
   createdAt   DateTime   @default(now())
@@ -74,8 +99,8 @@ model Permission {
 // Join tables
 
 model UserRole {
-  userId String
-  roleId String
+  userId String @db.Uuid
+  roleId String @db.Uuid
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
@@ -84,8 +109,8 @@ model UserRole {
 }
 
 model RolePermission {
-  roleId       String
-  permissionId String
+  roleId       String     @db.Uuid
+  permissionId String     @db.Uuid
   role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
@@ -96,7 +121,7 @@ model RolePermission {
 // ========== LOCATIONS ==========
 
 model Location {
-  id        String   @id @default(uuid())
+  id        String   @id @default(uuid()) @db.Uuid
   name      String   @unique
   code      String   @unique
   address   String?
@@ -115,8 +140,8 @@ model Location {
 }
 
 model UserLocation {
-  userId     String
-  locationId String
+  userId     String   @db.Uuid
+  locationId String   @db.Uuid
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
@@ -127,18 +152,18 @@ model UserLocation {
 // ========== CUSTOMERS ==========
 
 model Customer {
-  id                String   @id @default(uuid())
-  customerCode      String   @unique
+  id                String                    @id @default(uuid()) @db.Uuid
+  customerCode      String                    @unique
   firstName         String
   lastName          String
   email             String?
   phone             String?
-  gender            String?   // "MALE", "FEMALE", "OTHER"
-  acquisitionSource String   // "INSTAGRAM", "WHATSAPP", "TIKTOK", "WALK_IN", "REFERRAL", "WEBSITE", "OTHER"
+  gender            Gender?
+  acquisitionSource CustomerAcquisitionSource
   notes             String?
-  isActive          Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  isActive          Boolean                   @default(true)
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
 
   addresses            CustomerAddress[]
   measurementProfiles  MeasurementProfile[]
@@ -151,9 +176,9 @@ model Customer {
 }
 
 model CustomerAddress {
-  id         String   @id @default(uuid())
-  customerId String
-  label      String?  // e.g., "Home", "Office"
+  id         String   @id @default(uuid()) @db.Uuid
+  customerId String   @db.Uuid
+  label      String?
   address    String
   city       String?
   state      String?
@@ -167,8 +192,8 @@ model CustomerAddress {
 }
 
 model MeasurementProfile {
-  id          String   @id @default(uuid())
-  customerId  String
+  id          String   @id @default(uuid()) @db.Uuid
+  customerId  String   @db.Uuid
   name        String   @default("Default")
   notes       String?
   createdAt   DateTime @default(now())
@@ -181,8 +206,8 @@ model MeasurementProfile {
 }
 
 model MeasurementVersion {
-  id                    String   @id @default(uuid())
-  measurementProfileId  String
+  id                    String   @id @default(uuid()) @db.Uuid
+  measurementProfileId  String   @db.Uuid
   version               Int
   notes                 String?
   createdAt             DateTime @default(now())
@@ -195,10 +220,10 @@ model MeasurementVersion {
 }
 
 model Measurement {
-  id                    String   @id @default(uuid())
-  measurementVersionId  String
-  name                  String   // e.g., "Bust", "Waist", "Hips"
-  value                 Float
+  id                    String   @id @default(uuid()) @db.Uuid
+  measurementVersionId  String   @db.Uuid
+  name                  String
+  value                 Decimal  @db.Decimal(10, 2)
   unit                  String   @default("cm")
 
   measurementVersion    MeasurementVersion @relation(fields: [measurementVersionId], references: [id], onDelete: Cascade)
@@ -209,42 +234,42 @@ model Measurement {
 // ========== CATALOG ==========
 
 model Category {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  slug      String   @unique
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  slug        String   @unique
   description String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  products  Product[]
+  products    Product[]
 }
 
 model Collection {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  slug      String   @unique
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  slug        String   @unique
   description String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  products  ProductCollection[]
+  products    ProductCollection[]
 }
 
 model Product {
-  id          String   @id @default(uuid())
+  id          String   @id @default(uuid()) @db.Uuid
   name        String
   slug        String   @unique
   description String?
-  categoryId  String
+  categoryId  String   @db.Uuid
   category    Category @relation(fields: [categoryId], references: [id])
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  variants    ProductVariant[]
-  media       ProductMedia[]
-  collections ProductCollection[]
+  variants      ProductVariant[]
+  media         ProductMedia[]
+  collections   ProductCollection[]
   productionJobs ProductionJob[]
 
   @@index([categoryId])
@@ -252,13 +277,13 @@ model Product {
 }
 
 model ProductVariant {
-  id        String   @id @default(uuid())
-  productId String
+  id        String   @id @default(uuid()) @db.Uuid
+  productId String   @db.Uuid
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   sku       String   @unique
   color     String?
   size      String?
-  price     Float
+  price     Decimal  @db.Decimal(10, 2)
   stock     Int      @default(0)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -273,11 +298,11 @@ model ProductVariant {
 }
 
 model ProductMedia {
-  id        String   @id @default(uuid())
-  productId String
+  id        String   @id @default(uuid()) @db.Uuid
+  productId String   @db.Uuid
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   url       String
-  type      String   @default("image") // "image", "video"
+  type      String   @default("image")
   isPrimary Boolean  @default(false)
   createdAt DateTime @default(now())
 
@@ -285,8 +310,8 @@ model ProductMedia {
 }
 
 model ProductCollection {
-  productId    String
-  collectionId String
+  productId    String     @db.Uuid
+  collectionId String     @db.Uuid
   product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
   collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
 
@@ -297,26 +322,26 @@ model ProductCollection {
 // ========== INVENTORY ==========
 
 model InventoryBalance {
-  id        String   @id @default(uuid())
-  variantId String
-  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
-  locationId String
-  location  Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  quantity  Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(uuid()) @db.Uuid
+  variantId  String   @db.Uuid
+  variant    ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  locationId String   @db.Uuid
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  quantity   Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@unique([variantId, locationId])
   @@index([locationId])
 }
 
 model InventoryMovement {
-  id          String   @id @default(uuid())
-  variantId   String
+  id          String   @id @default(uuid()) @db.Uuid
+  variantId   String   @db.Uuid
   variant     ProductVariant @relation(fields: [variantId], references: [id])
-  locationId  String
+  locationId  String   @db.Uuid
   location    Location @relation(fields: [locationId], references: [id])
-  type        String   // OPENING_STOCK, PURCHASE, SALE, RESERVATION, RELEASE, TRANSFER_IN, TRANSFER_OUT, ADJUSTMENT, RETURN, PRODUCTION
+  type        String
   quantity    Int
   referenceId String?
   notes       String?
@@ -329,16 +354,16 @@ model InventoryMovement {
 }
 
 model StockTransfer {
-  id            String   @id @default(uuid())
+  id            String   @id @default(uuid()) @db.Uuid
   transferNumber String  @unique
-  fromLocationId String
+  fromLocationId String   @db.Uuid
   fromLocation  Location @relation("FromLocation", fields: [fromLocationId], references: [id])
-  toLocationId  String
+  toLocationId  String   @db.Uuid
   toLocation    Location @relation("ToLocation", fields: [toLocationId], references: [id])
-  status        String   @default("REQUESTED") // REQUESTED, APPROVED, IN_TRANSIT, RECEIVED, CANCELLED
-  requestedById String?
+  status        String   @default("REQUESTED")
+  requestedById String?  @db.Uuid
   requestedBy   User?    @relation("RequestedBy", fields: [requestedById], references: [id])
-  approvedById  String?
+  approvedById  String?  @db.Uuid
   approvedBy    User?    @relation("ApprovedBy", fields: [approvedById], references: [id])
   shippedAt     DateTime?
   receivedAt    DateTime?
@@ -354,10 +379,10 @@ model StockTransfer {
 }
 
 model StockTransferItem {
-  id              String   @id @default(uuid())
-  transferId      String
+  id              String   @id @default(uuid()) @db.Uuid
+  transferId      String   @db.Uuid
   transfer        StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
-  variantId       String
+  variantId       String   @db.Uuid
   variant         ProductVariant @relation(fields: [variantId], references: [id])
   quantity        Int
   receivedQuantity Int     @default(0)
@@ -369,9 +394,9 @@ model StockTransferItem {
 // ========== COMMERCE ==========
 
 model Cart {
-  id         String     @id @default(uuid())
-  userId     String?
-  customerId String?
+  id         String     @id @default(uuid()) @db.Uuid
+  userId     String?    @db.Uuid
+  customerId String?    @db.Uuid
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 
@@ -379,10 +404,10 @@ model Cart {
 }
 
 model CartItem {
-  id        String @id @default(uuid())
-  cartId    String
-  productId String
-  variantId String
+  id        String @id @default(uuid()) @db.Uuid
+  cartId    String @db.Uuid
+  productId String @db.Uuid
+  variantId String @db.Uuid
   quantity  Int
   cart      Cart   @relation(fields: [cartId], references: [id], onDelete: Cascade)
 
@@ -390,13 +415,13 @@ model CartItem {
 }
 
 model Order {
-  id           String   @id @default(uuid())
+  id           String   @id @default(uuid()) @db.Uuid
   orderNumber  String   @unique
-  customerId   String
+  customerId   String   @db.Uuid
   customer     Customer @relation(fields: [customerId], references: [id])
-  status       String   @default("PENDING") // PENDING, CONFIRMED, PROCESSING, READY, OUT_FOR_DELIVERY, DELIVERED, CANCELLED
-  salesChannel String   // WEBSITE, ABUJA_POS, WHATSAPP_ASSISTED, INSTAGRAM_ASSISTED, WALK_IN, OTHER
-  totalAmount  Float
+  status       String   @default("PENDING")
+  salesChannel String
+  totalAmount  Decimal  @db.Decimal(10, 2)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -407,37 +432,37 @@ model Order {
 }
 
 model OrderItem {
-  id          String @id @default(uuid())
-  orderId     String
-  order       Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productName String // Snapshot
-  sku         String // Snapshot
+  id          String  @id @default(uuid()) @db.Uuid
+  orderId     String  @db.Uuid
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productName String
+  sku         String
   size        String?
   color       String?
-  unitPrice   Float
+  unitPrice   Decimal @db.Decimal(10, 2)
   quantity    Int
-  totalPrice  Float
+  totalPrice  Decimal @db.Decimal(10, 2)
 }
 
 model OrderAddress {
-  id        String @id @default(uuid())
-  orderId   String @unique
-  order     Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  address   String
-  city      String?
-  state     String?
-  country   String @default("Nigeria")
+  id      String @id @default(uuid()) @db.Uuid
+  orderId String @unique @db.Uuid
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  address String
+  city    String?
+  state   String?
+  country String @default("Nigeria")
 }
 
 model Payment {
-  id        String   @id @default(uuid())
-  orderId   String
-  order     Order    @relation(fields: [orderId], references: [id])
-  reference String   @unique
-  amount    Float
-  status    String   @default("SUCCESSFUL") // FAILED, SUCCESSFUL, REFUNDED
-    receiptUrl    String?
-  createdAt DateTime @default(now())
+  id         String   @id @default(uuid()) @db.Uuid
+  orderId    String   @db.Uuid
+  order      Order    @relation(fields: [orderId], references: [id])
+  reference  String   @unique
+  amount     Decimal  @db.Decimal(10, 2)
+  status     String   @default("SUCCESSFUL")
+  receiptUrl String?
+  createdAt  DateTime @default(now())
 
   @@index([orderId])
 }
@@ -445,20 +470,20 @@ model Payment {
 // ========== PRODUCTION ==========
 
 model ProductionJob {
-  id          String   @id @default(uuid())
-  jobNumber   String   @unique
-  orderId     String?
-  order       Order?   @relation(fields: [orderId], references: [id])
-  productId   String?
-  product     Product? @relation(fields: [productId], references: [id])
-  status      String   @default("IN_PROGRESS") // NOT_STARTED, IN_PROGRESS, COMPLETED, CANCELLED
-  priority    String   @default("NORMAL") // LOW, NORMAL, HIGH
-  dueDate     DateTime?
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(uuid()) @db.Uuid
+  jobNumber String   @unique
+  orderId   String?  @db.Uuid
+  order     Order?   @relation(fields: [orderId], references: [id])
+  productId String?  @db.Uuid
+  product   Product? @relation(fields: [productId], references: [id])
+  status    String   @default("IN_PROGRESS")
+  priority  String   @default("NORMAL")
+  dueDate   DateTime?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  tasks       ProductionTask[]
+  tasks     ProductionTask[]
 
   @@index([orderId])
   @@index([productId])
@@ -466,23 +491,23 @@ model ProductionJob {
 }
 
 model ProductionTask {
-  id           String   @id @default(uuid())
-  productionJobId String
+  id              String   @id @default(uuid()) @db.Uuid
+  productionJobId String   @db.Uuid
   productionJob   ProductionJob @relation(fields: [productionJobId], references: [id], onDelete: Cascade)
-  assignedUserId String?
-  assignedUser   User?    @relation("AssignedUser", fields: [assignedUserId], references: [id])
-  department   String   // CUTTING, TAILORING, STONE, IRONING, QC
-  taskType     String
-  status       String   @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, REWORK
-  priority     String   @default("NORMAL") // LOW, NORMAL, HIGH
-  dueDate      DateTime?
-  startedAt    DateTime?
-  completedAt  DateTime?
-  notes        String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  assignedUserId  String?  @db.Uuid
+  assignedUser    User?    @relation("AssignedUser", fields: [assignedUserId], references: [id])
+  department      String
+  taskType        String
+  status          String   @default("PENDING")
+  priority        String   @default("NORMAL")
+  dueDate         DateTime?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  qualityChecks QualityCheck[]
+  qualityChecks   QualityCheck[]
 
   @@index([productionJobId])
   @@index([assignedUserId])
@@ -490,14 +515,14 @@ model ProductionTask {
 }
 
 model QualityCheck {
-  id        String   @id @default(uuid())
-  productionTaskId String
+  id               String   @id @default(uuid()) @db.Uuid
+  productionTaskId String   @db.Uuid
   productionTask   ProductionTask @relation(fields: [productionTaskId], references: [id], onDelete: Cascade)
-  checkedById String?
-  checkedBy   User?    @relation("CheckedBy", fields: [checkedById], references: [id])
-  status     String   @default("PENDING") // PENDING, PASSED, FAILED
-  notes      String?
-  createdAt  DateTime @default(now())
+  checkedById      String?  @db.Uuid
+  checkedBy        User?    @relation("CheckedBy", fields: [checkedById], references: [id])
+  status           String   @default("PENDING")
+  notes            String?
+  createdAt        DateTime @default(now())
 
   @@index([productionTaskId])
   @@index([checkedById])
@@ -506,94 +531,90 @@ model QualityCheck {
 // ========== BESPOKE / BRIDAL ==========
 
 model BespokeRequest {
-  id          String   @id @default(uuid())
-  requestNumber String @unique
-  customerId  String
-  customer    Customer @relation(fields: [customerId], references: [id])
-  description String
-  isNearCompany Boolean @default(false)
-  materialDescription String?
-  status      String   @default("PENDING") // PENDING, QUOTED, APPROVED, ORDERED, IN_PRODUCTION, COMPLETED, CANCELLED
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(uuid()) @db.Uuid
+  requestNumber String   @unique
+  customerId    String   @db.Uuid
+  customer      Customer @relation(fields: [customerId], references: [id])
+  description   String
+  status        String   @default("PENDING")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  media       BespokeMedia[]
-  quotes      Quote[]
+  media         BespokeMedia[]
+  quotes        Quote[]
 }
 
 model BespokeMedia {
-  id        String @id @default(uuid())
-  bespokeRequestId String
+  id               String @id @default(uuid()) @db.Uuid
+  bespokeRequestId String @db.Uuid
   bespokeRequest   BespokeRequest @relation(fields: [bespokeRequestId], references: [id], onDelete: Cascade)
-  url       String
-  type      String @default("image")
-  createdAt DateTime @default(now())
+  url              String
+  type             String @default("image")
+  createdAt        DateTime @default(now())
 
   @@index([bespokeRequestId])
 }
 
 model BridalRequest {
-  id          String   @id @default(uuid())
-  requestNumber String @unique
-  customerId  String
-  customer    Customer @relation(fields: [customerId], references: [id])
-  description String
-  isNearCompany Boolean @default(false)
-  materialDescription String?
-  status      String   @default("PENDING") // PENDING, QUOTED, APPROVED, ORDERED, IN_PRODUCTION, COMPLETED, CANCELLED
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(uuid()) @db.Uuid
+  requestNumber String   @unique
+  customerId    String   @db.Uuid
+  customer      Customer @relation(fields: [customerId], references: [id])
+  description   String
+  status        String   @default("PENDING")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  media       BridalMedia[]
-  quotes      Quote[]
+  media         BridalMedia[]
+  quotes        Quote[]
 }
 
 model BridalMedia {
-  id        String @id @default(uuid())
-  bridalRequestId String
+  id              String @id @default(uuid()) @db.Uuid
+  bridalRequestId String @db.Uuid
   bridalRequest   BridalRequest @relation(fields: [bridalRequestId], references: [id], onDelete: Cascade)
-  url       String
-  type      String @default("image")
-  createdAt DateTime @default(now())
+  url             String
+  type            String @default("image")
+  createdAt       DateTime @default(now())
 
   @@index([bridalRequestId])
 }
 
 model Quote {
-  id          String   @id @default(uuid())
-  quoteNumber String   @unique
-  bespokeRequestId String?
+  id               String   @id @default(uuid()) @db.Uuid
+  quoteNumber      String   @unique
+  bespokeRequestId String?  @db.Uuid
   bespokeRequest   BespokeRequest? @relation(fields: [bespokeRequestId], references: [id])
-  bridalRequestId  String?
+  bridalRequestId  String?  @db.Uuid
   bridalRequest    BridalRequest?  @relation(fields: [bridalRequestId], references: [id])
-  status      String   @default("DRAFT") // DRAFT, SENT, APPROVED, REJECTED
-  totalAmount Float
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  status           String   @default("DRAFT")
+  totalAmount      Decimal  @db.Decimal(10, 2)
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  items       QuoteItem[]
+  items            QuoteItem[]
 }
 
 model QuoteItem {
-  id        String @id @default(uuid())
-  quoteId   String
-  quote     Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
-  name      String
-  quantity  Int    @default(1)
-  unitPrice Float
-  totalPrice Float
+  id         String  @id @default(uuid()) @db.Uuid
+  quoteId    String  @db.Uuid
+  quote      Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  name       String
+  quantity   Int     @default(1)
+  unitPrice  Decimal @db.Decimal(10, 2)
+  totalPrice Decimal @db.Decimal(10, 2)
 }
 
 // ========== SYSTEM ==========
 
 model Notification {
-  id        String   @id @default(uuid())
-  userId    String?
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String?  @db.Uuid
   user      User?    @relation(fields: [userId], references: [id])
   title     String
   message   String
-  type      String   @default("INFO") // INFO, WARNING, SUCCESS, ERROR
+  type      String   @default("INFO")
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 
@@ -602,17 +623,17 @@ model Notification {
 }
 
 model AuditLog {
-  id        String   @id @default(uuid())
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id])
-  action    String
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @db.Uuid
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
   entityType String
-  entityId  String?
-  oldValue  String?
-  newValue  String?
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime @default(now())
+  entityId   String?
+  oldValue   String?
+  newValue   String?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
 
   @@index([userId])
   @@index([entityType])
