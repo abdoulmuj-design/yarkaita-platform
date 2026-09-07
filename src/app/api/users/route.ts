@@ -8,6 +8,13 @@ export async function GET() {
       id: true,
       name: true,
       email: true,
+      status: true,
+      roles: {
+        include: {
+          role: true,
+        },
+      },
+      staffProfile: true,
     },
   })
   return NextResponse.json(users)
@@ -15,7 +22,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json()
-  const { email, password, name, role } = body
+  const { email, password, name, role, department, position } = body
 
   if (!email || !password || !name) {
     return NextResponse.json({ error: 'email, password, and name are required' }, { status: 400 })
@@ -23,30 +30,44 @@ export async function POST(request: Request) {
 
   const passwordHash = await bcrypt.hash(password, 10)
 
-  const user = await prisma.user.create({
-    data: {
-      email,
-      passwordHash,
-      name,
-      status: 'ACTIVE',
-    },
-  })
-
-  // Assign role if provided (e.g., "POS", "TAILOR", etc.)
-  if (role) {
-    const roleRecord = await prisma.role.upsert({
-      where: { name: role },
-      update: {},
-      create: { name: role, description: `${role} Role` },
-    })
-
-    await prisma.userRole.create({
+  try {
+    const user = await prisma.user.create({
       data: {
-        userId: user.id,
-        roleId: roleRecord.id,
+        email,
+        passwordHash,
+        name,
+        status: 'ACTIVE',
+        staffProfile: department || position ? {
+          create: {
+            employeeCode: `EMP-${Date.now()}`,
+            department: department || 'General',
+            position: position || 'Staff',
+          },
+        } : undefined,
       },
     })
-  }
 
-  return NextResponse.json(user, { status: 201 })
+    if (role) {
+      const roleRecord = await prisma.role.upsert({
+        where: { name: role },
+        update: {},
+        create: { name: role, description: `${role} Role` },
+      })
+
+      await prisma.userRole.create({
+        data: {
+          userId: user.id,
+          roleId: roleRecord.id,
+        },
+      })
+    }
+
+    return NextResponse.json(user, { status: 201 })
+  } catch (error: any) {
+    if (error.code === 'P2002') {
+      return NextResponse.json({ error: 'This email is already registered' }, { status: 409 })
+    }
+    console.error(error)
+    return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
+  }
 }

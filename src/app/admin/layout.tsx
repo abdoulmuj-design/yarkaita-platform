@@ -24,6 +24,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </div>
               <div className="space-x-6 font-semibold">
                 <Link href="/admin" className="hover:text-gray-300 transition">Dashboard</Link>
+                <Link href="/admin/staff" className="hover:text-gray-300 transition">Staff</Link>
                 <Link href="/admin/orders" className="hover:text-gray-300 transition">Orders</Link>
                 <Link href="/admin/customers" className="hover:text-gray-300 transition">Customers</Link>
                 <Link href="/admin/products" className="hover:text-gray-300 transition">Products</Link>
