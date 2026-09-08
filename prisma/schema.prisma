@@ -537,6 +537,8 @@ model BespokeRequest {
   customerId    String   @db.Uuid
   customer      Customer @relation(fields: [customerId], references: [id])
   description   String
+  isNearCompany Boolean @default(false)
+  materialDescription String?
   status        String   @default("PENDING")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -562,6 +564,8 @@ model BridalRequest {
   customerId    String   @db.Uuid
   customer      Customer @relation(fields: [customerId], references: [id])
   description   String
+  isNearCompany Boolean @default(false)
+  materialDescription String?
   status        String   @default("PENDING")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
