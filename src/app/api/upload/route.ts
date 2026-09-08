@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server'
-import { writeFile, mkdir } from 'fs/promises'
-import path from 'path'
 
 export async function POST(request: Request) {
   const formData = await request.formData()
@@ -10,16 +8,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
   }
 
-  // Create uploads directory if it doesn't exist
-  const uploadsDir = path.join(process.cwd(), 'public', 'uploads')
-  await mkdir(uploadsDir, { recursive: true })
+  // Convert file to base64 string (demo only - works on Vercel)
+  const buffer = await file.arrayBuffer()
+  const base64 = Buffer.from(buffer).toString('base64')
+  const mimeType = file.type || 'image/jpeg'
+  const dataUrl = `data:${mimeType};base64,${base64}`
 
-  // Save file
-  const buffer = Buffer.from(await file.arrayBuffer())
-  const fileName = `${Date.now()}-${file.name.replace(/\s/g, '_')}`
-  const filePath = path.join(uploadsDir, fileName)
-
-  await writeFile(filePath, buffer)
-
-  return NextResponse.json({ url: `/uploads/${fileName}` }, { status: 201 })
+  return NextResponse.json({ url: dataUrl }, { status: 201 })
 }
