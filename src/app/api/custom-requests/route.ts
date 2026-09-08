@@ -17,8 +17,8 @@ export async function POST(request: Request) {
         requestNumber,
         customerId,
         description,
-        isNearCompany: isNearCompany || false,
-        materialDescription,
+        isNearCompany: Boolean(isNearCompany),
+        materialDescription: materialDescription || null,
         media: {
           create: (images || []).map((url: string) => ({ url, type: 'image' })),
         },
@@ -31,8 +31,8 @@ export async function POST(request: Request) {
         requestNumber,
         customerId,
         description,
-        isNearCompany: isNearCompany || false,
-        materialDescription,
+        isNearCompany: Boolean(isNearCompany),
+        materialDescription: materialDescription || null,
         media: {
           create: (images || []).map((url: string) => ({ url, type: 'image' })),
         },
