@@ -423,6 +423,7 @@ model Order {
   status       String   @default("PENDING")
   salesChannel String
   totalAmount  Decimal  @db.Decimal(10, 2)
+    deliveryAssignedUserId String? @db.Uuid
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
