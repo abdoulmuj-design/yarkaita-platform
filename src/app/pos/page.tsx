@@ -70,7 +70,6 @@ export default function POSPage() {
         const inventory = await invRes.json()
         const locations = await locRes.json()
 
-        // Total Sales (Number)
         const totalSales = payments
           .filter((p: any) => p.status === 'SUCCESSFUL')
           .reduce((sum: number, p: any) => sum + Number(p.amount), 0)
@@ -81,7 +80,6 @@ export default function POSPage() {
           totalCustomers: Array.isArray(customers) ? customers.length : 0,
         })
 
-        // Find Abuja and Katsina locations
         const abuja = locations.find((l: any) => l.code === 'ABJ')
         const katsina = locations.find((l: any) => l.code === 'KAT')
         if (abuja) {
@@ -145,7 +143,6 @@ export default function POSPage() {
     try {
       const token = localStorage.getItem('yarkaita_token')
 
-      // Create walk-in customer (simplified)
       const customerRes = await fetch('/api/customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token && { 'Authorization': `Bearer ${token}` }) },
@@ -154,7 +151,6 @@ export default function POSPage() {
       const customer = await customerRes.json()
       const customerId = customer.id
 
-      // Create order & deduct stock
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token && { 'Authorization': `Bearer ${token}` }) },
@@ -173,7 +169,6 @@ export default function POSPage() {
 
       alert(`${t.checkoutSuccess} Total: ₦${totalCart.toLocaleString()}`)
       setCart([])
-      // Reload inventory
       const updatedInv = await fetch('/api/inventory/balances', {
         headers: { 'Authorization': `Bearer ${token}` },
       })

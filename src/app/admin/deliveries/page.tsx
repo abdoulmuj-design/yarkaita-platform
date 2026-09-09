@@ -54,8 +54,8 @@ export default function AdminDeliveriesPage() {
 
       setOrders(Array.isArray(ordersData) ? ordersData : [])
       setUsers(Array.isArray(usersData) ? usersData : [])
-    } catch (err) {
-      console.error(err)
+    } catch (error) {
+      console.error(error)
     } finally {
       setLoading(false)
     }
@@ -84,9 +84,9 @@ export default function AdminDeliveriesPage() {
 
       alert('Delivery assigned successfully!')
       fetchData()
-    } catch (err) {
-      console.error(err)
-      alert('Failed to assign delivery')
+    } catch (error) {
+      console.error(error)
+      alert((error as Error).message || 'Failed to assign delivery')
     }
   }
 
