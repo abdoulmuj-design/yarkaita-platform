@@ -9,6 +9,11 @@ export default function CartPage() {
   const [cart, setCart] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [checkingOut, setCheckingOut] = useState(false)
+  const [receiptFile, setReceiptFile] = useState<File | null>(null)
+  const [paymentId, setPaymentId] = useState<string | null>(null)
+  const [showBankDetails, setShowBankDetails] = useState(false)
+  const [showPendingMessage, setShowPendingMessage] = useState(false)
+  const [orderNumber, setOrderNumber] = useState('')
 
   // Walk-in Customer Details
   const [name, setName] = useState('')
@@ -18,11 +23,57 @@ export default function CartPage() {
   const [city, setCity] = useState('')
   const [state, setState] = useState('')
 
-  const [receiptFile, setReceiptFile] = useState<File | null>(null)
-  const [paymentId, setPaymentId] = useState<string | null>(null)
-  const [showBankDetails, setShowBankDetails] = useState(false)
-  const [showPendingMessage, setShowPendingMessage] = useState(false)
-  const [orderNumber, setOrderNumber] = useState('')
+  // ✅ HANYA KARATUN HOTO (Don Rage Girma Kafin Upload)
+  async function compressImage(file: File): Promise<File> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = (event) => {
+        const img = new Image()
+        img.src = event.target?.result as string
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          const MAX_WIDTH = 800
+          const MAX_HEIGHT = 800
+          let width = img.width
+          let height = img.height
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width
+              width = MAX_WIDTH
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height
+              height = MAX_HEIGHT
+            }
+          }
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext('2d')
+          ctx?.drawImage(img, 0, 0, width, height)
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error('Could not compress image'))
+                return
+              }
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              })
+              resolve(compressedFile)
+            },
+            'image/jpeg',
+            0.7
+          )
+        }
+        img.onerror = reject
+      }
+      reader.onerror = reject
+    })
+  }
 
   function loadCart() {
     try {
@@ -65,7 +116,6 @@ export default function CartPage() {
   async function handleCheckout() {
     setCheckingOut(true)
     try {
-      // 1. Create Walk-In Customer (with details)
       const customerRes = await fetch('/api/customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -83,7 +133,6 @@ export default function CartPage() {
 
       const customerId = customer.id
 
-      // 2. Create Order & Payment (Status: PENDING)
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -112,9 +161,9 @@ export default function CartPage() {
       setShowBankDetails(true)
       setCheckingOut(false)
       
-    } catch (err) {
-      console.error('Checkout error:', err)
-      alert('Checkout failed. Please try again.')
+    } catch (error) {
+      console.error(error)
+      alert((error as Error).message || 'Checkout failed. Please try again.')
       setCheckingOut(false)
     }
   }
@@ -127,14 +176,16 @@ export default function CartPage() {
 
     setCheckingOut(true)
     try {
+      // ✅ COMPRESS IMAGE BEFORE UPLOAD
+      const compressedFile = await compressImage(receiptFile)
+
       const formData = new FormData()
-      formData.append('file', receiptFile)
+      formData.append('file', compressedFile)
       const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData })
       const uploadData = await uploadRes.json()
 
       if (!uploadData.url) throw new Error('Upload failed')
 
-      // Update Payment with receiptUrl (Status stays PENDING)
       await fetch(`/api/payments/${paymentId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -146,9 +197,9 @@ export default function CartPage() {
       setShowBankDetails(false)
       setReceiptFile(null)
       router.push('/')
-    } catch (err) {
-      console.error('Upload error:', err)
-      alert('Failed to upload receipt. Please try again.')
+    } catch (error) {
+      console.error(error)
+      alert((error as Error).message || 'Failed to upload receipt. Please try again.')
     } finally {
       setCheckingOut(false)
     }

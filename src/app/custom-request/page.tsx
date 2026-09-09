@@ -12,24 +12,82 @@ export default function CustomRequestPage() {
   const [colors, setColors] = useState('')
   const [isNearCompany, setIsNearCompany] = useState(false)
   const [materialDescription, setMaterialDescription] = useState('')
-  const [images, setImages] = useState<File[]>([]) // Changed to File[]
+  const [images, setImages] = useState<File[]>([])
   const [loading, setLoading] = useState(false)
+
+  // ✅ HANYA KARATUN HOTO (Don Rage Girma Kafin Upload)
+  async function compressImage(file: File): Promise<File> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = (event) => {
+        const img = new Image()
+        img.src = event.target?.result as string
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          const MAX_WIDTH = 800
+          const MAX_HEIGHT = 800
+          let width = img.width
+          let height = img.height
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width
+              width = MAX_WIDTH
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height
+              height = MAX_HEIGHT
+            }
+          }
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext('2d')
+          ctx?.drawImage(img, 0, 0, width, height)
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error('Could not compress image'))
+                return
+              }
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              })
+              resolve(compressedFile)
+            },
+            'image/jpeg',
+            0.7
+          )
+        }
+        img.onerror = reject
+      }
+      reader.onerror = reject
+    })
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
 
     try {
-      // 1. Upload images first
+      // 1. Compress and upload images
       const imageUrls: string[] = []
       for (const file of images) {
+        const compressedFile = await compressImage(file)
         const formData = new FormData()
-        formData.append('file', file)
+        formData.append('file', compressedFile)
+
         const uploadRes = await fetch('/api/upload', {
           method: 'POST',
           body: formData,
         })
         const uploadData = await uploadRes.json()
+
+        if (!uploadRes.ok) {
+          throw new Error(uploadData.error || 'Upload failed')
+        }
         imageUrls.push(uploadData.url)
       }
 
@@ -44,6 +102,7 @@ export default function CustomRequestPage() {
           body: JSON.stringify({ firstName: 'Walk-In', lastName: 'Customer', acquisitionSource: 'WEBSITE' }),
         })
         const customer = await customerRes.json()
+        if (!customerRes.ok) throw new Error(customer.error || 'Failed to create customer')
         customerId = customer.id
       }
 
@@ -67,9 +126,9 @@ export default function CustomRequestPage() {
 
       alert('Request submitted successfully! We will contact you shortly.')
       router.push('/')
-    } catch (err) {
-      console.error(err)
-      alert('Failed to submit request. Please try again.')
+    } catch (error) {
+      console.error(error)
+      alert((error as Error).message || 'Failed to submit request. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -96,7 +155,6 @@ export default function CustomRequestPage() {
         <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-md p-6 max-w-2xl">
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">Wear Type</label>
-            {/* An gyara nan: sanya text-gray-900 da bg-white */}
             <select
               value={type}
               onChange={(e) => setType(e.target.value)}
