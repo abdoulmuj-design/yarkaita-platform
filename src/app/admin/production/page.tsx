@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useLanguage } from '@/lib/LanguageContext'
+import Link from 'next/link'
 
 export default function AdminProductionPage() {
   const { language } = useLanguage()
@@ -26,6 +27,7 @@ export default function AdminProductionPage() {
       assign: 'Assign Staff',
       assignBtn: 'Assign',
       noUser: 'Select Staff',
+      viewDetails: 'View Details',
     },
     ha: {
       title: 'Ayyukan Samarwa',
@@ -41,6 +43,7 @@ export default function AdminProductionPage() {
       assign: 'Sanya Ma\'aikaci',
       assignBtn: 'Sanya',
       noUser: 'Zaɓi Ma\'aikaci',
+      viewDetails: 'Duba Cikakken Bayani',
     },
   }
 
@@ -136,10 +139,14 @@ export default function AdminProductionPage() {
                     {job.tasks?.map((task: any) => (
                       <div key={task.id} className="flex justify-between items-center bg-gray-50 p-3 rounded">
                         <div>
-                          <p className="font-medium">{task.taskType}</p>
+                          <Link href={`/admin/production/tasks/${task.id}`} className="font-medium text-blue-600 hover:underline">
+                            {task.taskType}
+                          </Link>
                           <p className="text-sm text-gray-500">{task.department}</p>
                           {task.assignedUser && (
-                            <p className="text-sm text-green-600">Assigned to: {task.assignedUser.name}</p>
+                            <p className="text-sm text-green-600">
+                              Assigned to: {task.assignedUser.name}
+                            </p>
                           )}
                         </div>
                         {!task.assignedUser && (
@@ -151,7 +158,9 @@ export default function AdminProductionPage() {
                             >
                               <option value="">{t.noUser}</option>
                               {users.map((user) => (
-                                <option key={user.id} value={user.id}>{user.name} ({user.roles?.[0]?.role?.name || 'No Role'})</option>
+                                <option key={user.id} value={user.id}>
+                                  {user.name} ({user.roles?.[0]?.role?.name || 'No Role'})
+                                </option>
                               ))}
                             </select>
                             <button

@@ -1,8 +1,8 @@
 'use client'
 
 import { LanguageProvider } from '@/lib/LanguageContext'
-import { usePathname } from 'next/navigation'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 export default function PosLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -11,9 +11,7 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
   return (
     <LanguageProvider>
       {isLoginPage ? (
-        <div className="min-h-screen bg-black">
-          {children}
-        </div>
+        <div className="min-h-screen bg-black">{children}</div>
       ) : (
         <div className="min-h-screen bg-gray-100">
           <nav className="bg-black text-white p-4 shadow-lg">
@@ -22,13 +20,12 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
                 <img src="/yarkaita-logo.png" alt="YARKAITA Logo" className="h-10 w-auto" />
               </div>
               <div className="space-x-6 font-semibold">
-                <Link href="/pos" className="hover:text-gray-300 transition">Dashboard</Link>
+                <Link href="/pos" className="hover:text-gray-300 transition">POS Dashboard</Link>
+                <Link href="/pos/transfers" className="hover:text-gray-300 transition">Stock Transfers</Link>
               </div>
             </div>
           </nav>
-          <main className="container mx-auto p-6">
-            {children}
-          </main>
+          <main className="container mx-auto p-6">{children}</main>
         </div>
       )}
     </LanguageProvider>

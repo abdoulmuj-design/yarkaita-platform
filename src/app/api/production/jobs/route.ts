@@ -6,7 +6,11 @@ export async function GET() {
     include: {
       order: true,
       product: true,
-      tasks: true,
+      tasks: {
+        include: {
+          assignedUser: true, // An ƙara wannan don nuna sunan ma'aikaci
+        },
+      },
     },
     orderBy: { createdAt: 'desc' },
   })
