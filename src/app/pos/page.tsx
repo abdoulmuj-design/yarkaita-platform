@@ -9,6 +9,7 @@ export default function POSPage() {
   const [inventory, setInventory] = useState<any[]>([])
   const [locations, setLocations] = useState<any[]>([])
   const [abujaLocationId, setAbujaLocationId] = useState('')
+  const [katsinaLocationId, setKatsinaLocationId] = useState('')
   const [cart, setCart] = useState<any[]>([])
   const [checkingOut, setCheckingOut] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -27,6 +28,9 @@ export default function POSPage() {
     checkout: 'Checkout',
     checkoutSuccess: 'Order completed! Stock deducted.',
     emptyCart: 'Cart is empty. Select an item to sell.',
+    requestStock: 'Request More',
+    lowStock: 'LOW STOCK',
+    noOrders: 'No recent orders.',
   } : {
     title: 'Wurin Sayarwa',
     totalSales: 'Jimlar Siyarwa',
@@ -41,6 +45,9 @@ export default function POSPage() {
     checkout: 'Kammala',
     checkoutSuccess: 'An kammala oda! An cire kaya daga stock.',
     emptyCart: 'Cart babu komai. Zaɓi kayan da za ka sayar.',
+    requestStock: 'Nemi Kaya',
+    lowStock: 'KAYA YA KUSA KAREWA',
+    noOrders: 'Babu oda na kwanan nan.',
   }
 
   useEffect(() => {
@@ -74,16 +81,21 @@ export default function POSPage() {
           totalCustomers: Array.isArray(customers) ? customers.length : 0,
         })
 
+        // Find Abuja and Katsina locations
         const abuja = locations.find((l: any) => l.code === 'ABJ')
+        const katsina = locations.find((l: any) => l.code === 'KAT')
         if (abuja) {
           setAbujaLocationId(abuja.id)
           const abujaInv = inventory.filter((item: any) => item.locationId === abuja.id)
           setInventory(abujaInv)
         }
+        if (katsina) {
+          setKatsinaLocationId(katsina.id)
+        }
         setLocations(locations)
 
-      } catch (err) {
-        console.error(err)
+      } catch (error) {
+        console.error(error)
       } finally {
         setLoading(false)
       }
@@ -149,7 +161,7 @@ export default function POSPage() {
         body: JSON.stringify({
           customerId,
           salesChannel: 'ABUJA_POS',
-          locationId: abujaLocationId, // Wannan shine yadda zai san yanki
+          locationId: abujaLocationId,
           items: cart,
         }),
       })
@@ -167,11 +179,41 @@ export default function POSPage() {
       })
       const data = await updatedInv.json()
       setInventory(data.filter((item: any) => item.locationId === abujaLocationId))
-    } catch (err) {
-      console.error(err)
-      alert(err.message || 'Checkout failed.')
+    } catch (error) {
+      console.error(error)
+      alert((error as Error).message || 'Checkout failed.')
     } finally {
       setCheckingOut(false)
+    }
+  }
+
+  async function handleRequestStock(variantId: string, productName: string) {
+    if (!abujaLocationId || !katsinaLocationId) {
+      alert('Locations not found.')
+      return
+    }
+
+    if (!confirm(`Do you want to request more stock for ${productName} from Katsina?`)) return
+
+    try {
+      const token = localStorage.getItem('yarkaita_token')
+      const res = await fetch('/api/stock-transfers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          fromLocationId: katsinaLocationId,
+          toLocationId: abujaLocationId,
+          items: [{ variantId, quantity: 10 }],
+          notes: 'Low stock alert - Requesting restock from POS',
+        }),
+      })
+
+      if (!res.ok) throw new Error('Failed to request stock')
+
+      alert('Stock request sent to Katsina!')
+    } catch (error) {
+      console.error(error)
+      alert((error as Error).message || 'Failed to request stock. Please try again.')
     }
   }
 
@@ -233,17 +275,27 @@ export default function POSPage() {
                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                             item.quantity <= 5 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                           }`}>
-                            {item.quantity}
+                            {item.quantity} {item.quantity <= 5 ? `(${t.lowStock})` : ''}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <button
-                            onClick={() => handleAddToCart(item)}
-                            disabled={item.quantity === 0}
-                            className="bg-black text-white px-3 py-1 rounded text-sm hover:bg-gray-800 disabled:opacity-50"
-                          >
-                            {t.sell}
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleAddToCart(item)}
+                              disabled={item.quantity === 0}
+                              className="bg-black text-white px-3 py-1 rounded text-sm hover:bg-gray-800 disabled:opacity-50"
+                            >
+                              {t.sell}
+                            </button>
+                            {item.quantity <= 5 && (
+                              <button
+                                onClick={() => handleRequestStock(item.variantId, item.variant?.product?.name)}
+                                className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                              >
+                                {t.requestStock}
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}

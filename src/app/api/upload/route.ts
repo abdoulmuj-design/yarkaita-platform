@@ -8,14 +8,14 @@ cloudinary.config({
 })
 
 export async function POST(request: Request) {
-  const formData = await request.formData()
-  const file = formData.get('file') as File
-
-  if (!file) {
-    return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
-  }
-
   try {
+    const formData = await request.formData()
+    const file = formData.get('file') as File
+
+    if (!file) {
+      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
+    }
+
     const buffer = await file.arrayBuffer()
     const base64 = Buffer.from(buffer).toString('base64')
     const dataUri = `data:${file.type};base64,${base64}`

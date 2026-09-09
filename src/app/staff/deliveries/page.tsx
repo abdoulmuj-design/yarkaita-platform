@@ -57,6 +57,7 @@ export default function StaffDeliveriesPage() {
       if (!res.ok) throw new Error('Failed to mark as delivered')
 
       alert('Order marked as delivered!')
+
       // Refetch deliveries
       const user = JSON.parse(localStorage.getItem('yarkaita_user') || '{}')
       const updated = await fetch('/api/deliveries?role=staff', {

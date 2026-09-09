@@ -39,28 +39,29 @@ export default function AdminDeliveriesPage() {
 
   const t = translations[language]
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const token = localStorage.getItem('yarkaita_token')
-        const headers = { 'Authorization': `Bearer ${token}` }
+  async function fetchData() {
+    try {
+      const token = localStorage.getItem('yarkaita_token')
+      const headers = { 'Authorization': `Bearer ${token}` }
 
-        const [ordersRes, usersRes] = await Promise.all([
-          fetch('/api/deliveries?role=admin', { headers }),
-          fetch('/api/users', { headers }),
-        ])
+      const [ordersRes, usersRes] = await Promise.all([
+        fetch('/api/deliveries?role=admin', { headers }),
+        fetch('/api/users', { headers }),
+      ])
 
-        const ordersData = await ordersRes.json()
-        const usersData = await usersRes.json()
+      const ordersData = await ordersRes.json()
+      const usersData = await usersRes.json()
 
-        setOrders(Array.isArray(ordersData) ? ordersData : [])
-        setUsers(Array.isArray(usersData) ? usersData : [])
-      } catch (err) {
-        console.error(err)
-      } finally {
-        setLoading(false)
-      }
+      setOrders(Array.isArray(ordersData) ? ordersData : [])
+      setUsers(Array.isArray(usersData) ? usersData : [])
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     fetchData()
   }, [language])
 
